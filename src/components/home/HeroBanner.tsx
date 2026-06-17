@@ -52,7 +52,7 @@ export default function HeroBanner() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
       {/* Left — Big Slider (2/3 width) - ফুল ইমেজ ক্লিকেবল */}
-      <div className="lg:col-span-2 relative h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-lg group/slider">
+      <div className="lg:col-span-2 relative h-48 sm:h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-lg group/slider">
         
         {/* স্লাইড র্যাপার কন্টেইনার */}
         <div 
@@ -77,41 +77,41 @@ export default function HeroBanner() {
         {/* Arrows */}
         <button
           onClick={prev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 md:opacity-0 md:group-hover/slider:opacity-100 text-white p-2.5 rounded-full transition-all z-10 cursor-pointer"
+          className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 md:opacity-0 md:group-hover/slider:opacity-100 text-white p-2 rounded-full transition-all z-10 cursor-pointer"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={16} />
         </button>
         <button
           onClick={next}
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 md:opacity-0 md:group-hover/slider:opacity-100 text-white p-2.5 rounded-full transition-all z-10 cursor-pointer"
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 md:opacity-0 md:group-hover/slider:opacity-100 text-white p-2 rounded-full transition-all z-10 cursor-pointer"
         >
-          <ChevronRight size={18} />
+          <ChevronRight size={16} />
         </button>
 
         {/* Dots */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
           {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
               className={`rounded-full transition-all cursor-pointer ${
-                i === current ? "w-6 h-2 bg-white" : "w-2 h-2 bg-white/50"
+                i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
               }`}
             />
           ))}
         </div>
       </div>
 
-      {/* Right — 2 Stacked Banners (1/3 width) - টেক্সট ও বাটন উধাও, ফুল ইমেজ ক্লিকেবল */}
-      <div className="hidden lg:flex flex-col gap-4">
+      {/* Right — 2 Banners (মোবাইলে নিচে পাশাপাশি ২ কলামে দেখাবে, ডেক্সটপে ডান পাশে স্ট্যাকড থাকবে - পয়েন্ট ৩ ফিক্সড) */}
+      <div className="grid grid-cols-2 lg:flex lg:flex-col gap-4">
         {sideBanners.map((banner) => (
           <Link
             key={banner.id}
             href={banner.href}
-            className={`flex-1 bg-gradient-to-br ${banner.bg} rounded-2xl overflow-hidden block cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300`}
+            className={`bg-gradient-to-br ${banner.bg} rounded-2xl overflow-hidden block cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 h-24 sm:h-32 lg:h-auto lg:flex-1`}
           >
-            {/* ইমেজ বা ব্যাকগ্রাউন্ডের জন্য এই স্পেসটি এখন একদম খালি ও ক্লিন */}
-            <div className="w-full h-full min-h-[120px] lg:min-h-0" />
+            {/* ইমেজ বা ব্যাকগ্রাউন্ডের জন্য এই স্পেসটি খালি ও ক্লিন */}
+            <div className="w-full h-full" />
           </Link>
         ))}
       </div>

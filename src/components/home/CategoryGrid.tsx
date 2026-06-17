@@ -20,17 +20,19 @@ export default function CategoryGrid() {
           View All →
         </Link>
       </div>
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+      
+      {/* 🛠️ ফিক্সড: মোবাইলে নো-র‍্যাপ এবং ওয়ান-রো স্ক্রোলিং, ডেস্কটপে গ্রিড-৮ */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-2 md:pb-0 md:grid md:grid-cols-8 md:overflow-x-visible scrollbar-hide snap-x snap-mandatory">
         {categories.map((cat) => (
           <Link
             key={cat.slug}
             href={`/products?category=${cat.slug}`}
-            className={`${cat.color} rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md hover:-translate-y-0.5 group`}
+            className={`${cat.color} rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md hover:-translate-y-0.5 group min-w-[85px] md:min-w-0 snap-center flex-shrink-0`}
           >
-            <span className="text-3xl group-hover:scale-110 transition-transform">
+            <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">
               {cat.icon}
             </span>
-            <span className="text-xs font-semibold text-gray-700 text-center leading-tight">
+            <span className="text-[11px] md:text-xs font-bold text-gray-700 text-center leading-tight whitespace-nowrap md:whitespace-normal">
               {cat.name}
             </span>
           </Link>

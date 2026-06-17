@@ -2,7 +2,8 @@
 
 export default function PromoBanner() {
   return (
-    <div className="flex items-center justify-center bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100/50">
+    /* 🛠️ ফিক্সড: hidden md:flex যোগ করা হয়েছে যাতে মোবাইলে পুরোপুরি হাইড থাকে এবং ডেস্কটপে দেখায় */
+    <div className="hidden md:flex items-center justify-center bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100/50">
       {[
         { title: "Free Delivery", subtitle: "Above ৳999", icon: "🚚" },
         { title: "Secure Payment", subtitle: "bKash, Nagad, COD", icon: "🔒" },
@@ -10,7 +11,6 @@ export default function PromoBanner() {
       ].map((item, i) => (
         <div
           key={item.title}
-          /* 🛠️ ফিক্সড লজیک: justify-center যুক্ত করা হলো যাতে কন্টেন্ট একদম সেন্টারে থাকে এবং pl/ml এডজাস্ট করা হলো */
           className={`flex items-center justify-center gap-3.5 flex-1 min-w-0 ${
             i !== 0 ? "border-l border-gray-100 pl-4 ml-4" : ""
           }`}

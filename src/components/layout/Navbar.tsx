@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import {
   ShoppingCart, Heart, User, Menu, X,
   Gift, BookOpen, CreditCard, Store, Package, Phone,
-  ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle
+  ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle, Search
 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import CartDrawer from "@/components/cart/CartDrawer"; 
 import SearchBar from "./SearchBar"; 
 import LoginModal from "@/components/auth/LoginModal"; 
 
-//(Main -> Sub -> Child)
+// (Main -> Sub -> Child)
 const categoriesData = [
   {
     name: "Electronics",
@@ -177,6 +177,9 @@ export default function Navbar() {
   const [userName, setUserName] = useState(""); 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // মোবাইল সার্চ ড্রপডাউন কন্ট্রোল করার জন্য নতুন স্টেট
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
   useEffect(() => {
     setMounted(true);
     const userSession = localStorage.getItem("isLoggedIn");
@@ -225,7 +228,7 @@ export default function Navbar() {
   return (
     <header className="w-full sticky top-0 z-50">
 
-      {/* Top Bar — desktop only */}
+      {/* Top Bar — desktop only (পয়েন্ট ১ ফিক্সড) */}
       <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
         <div className="container-main flex items-center justify-between">
           <div className="flex items-center gap-1 text-gray-600 font-medium">
@@ -254,20 +257,25 @@ export default function Navbar() {
 
       {/* Main Navbar */}
       <div className="bg-[#1a1a2e] shadow-lg">
-        <div className="container-main flex items-center gap-2 md:gap-4 py-2.5">
+        <div className="container-main flex items-center justify-between py-2.5">
 
-          {/* Mobile Menu Button */}
-          <button className="md:hidden p-1.5 text-white flex-shrink-0" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {/* Left Side: Hamburger Menu + Logo (পয়েন্ট ২ ফিক্সড) */}
+          <div className="flex items-center gap-2">
+            {/* Mobile Menu Button (≡ Icon) */}
+            <button className="md:hidden p-1 text-white flex-shrink-0" onClick={() => setMobileOpen(!mobileOpen)}>
+              <Menu size={24} />
+            </button>
 
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center">
-            <img src="/logo/logo.png" alt="onecarta logo" className="h-8 md:h-10 w-auto object-contain transition-transform hover:scale-105" />
-          </Link>
+            {/* Logo */}
+            <Link href="/" className="flex-shrink-0 flex items-center">
+              <img src="/logo/logo.png" alt="onecarta logo" className="h-8 md:h-10 w-auto object-contain transition-transform hover:scale-105" />
+            </Link>
+          </div>
 
-          {/* Search Bar */}
-          <SearchBar />
+          {/* Search Bar — desktop only (মোবাইলে হেডার থেকে হাইড) */}
+          <div className="hidden md:block flex-1 max-w-xl mx-4">
+            <SearchBar />
+          </div>
 
           {/* Action Icons */}
           <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
@@ -275,34 +283,37 @@ export default function Navbar() {
               <Gift size={13} /> OFFER
             </Link>
 
-            <Link href="/wishlist" className="relative p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9]">
-              <Heart size={18} />
+            {/* Wishlist Button (মোবাইলে এবং ডেক্সটপে দুইখানেই রেডি) */}
+            <Link href="/wishlist" className="relative p-1.5 flex items-center gap-1.5 md:border md:border-[#a8a6d9] text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9]">
+              <Heart size={20} className="md:w-[18px] md:h-[18px]" />
               <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
             </Link>
 
+            {/* Cart Button — desktop only (মোবাইলে নিচে চলে গেছে, বাট হেডারেও ব্যাকআপ ব্যাকগ্রাউন্ডেড) */}
             <button
               onClick={() => setCartOpen(true)}
-              className={`relative p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${
-                isAnimate ? "scale-110 bg-white/10" : "scale-100"
+              className={`relative p-1.5 flex items-center gap-1.5 md:border md:border-[#a8a6d9] text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${
+                isAnimate ? "scale-110" : "scale-100"
               }`}
             >
-              <ShoppingCart size={18} className={`${isAnimate ? "animate-bounce" : ""}`} />
+              <ShoppingCart size={20} className={`md:w-[18px] md:h-[18px] ${isAnimate ? "animate-bounce" : ""}`} />
               <span className="hidden lg:block text-xs font-bold">CART</span>
               {mounted && totalItems > 0 && (
-                <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-transform duration-300 ${isAnimate ? "scale-125" : "scale-100"}`}>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {totalItems > 99 ? "99+" : totalItems}
                 </span>
               )}
             </button>
 
+            {/* Login / Profile (মোবাইল হেডারেও ড্রপডাউন যেন ঠিক থাকে) */}
             {!isLoggedIn ? (
-              <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] cursor-pointer">
-                <User size={18} />
+              <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 flex items-center gap-1.5 md:border md:border-[#a8a6d9] text-white md:hover:bg-[#a8a6d9] hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] cursor-pointer">
+                <User size={20} className="md:w-[18px] md:h-[18px]" />
                 <span className="hidden lg:block text-xs font-bold">LOGIN</span>
               </button>
             ) : (
               <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer">
+                <button onClick={() => { setIsDropdownOpen(!isDropdownOpen); setMobileOpen(false); }} className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer">
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs shadow-inner uppercase">
                     {userName[0]} 
                   </div>
@@ -336,16 +347,17 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🟦 [3-LEVEL MEGAMENU BAR] — 🛠️ কাস্টম ফিক্সড: ব্যাকগ্রাউন্ড সাদা, টেক্সট ডার্ক, বাটন দুটি থিম কালার */}
+      {/* ওপরে সার্চে ক্লিক করলে মোবাইলে যে এক্সপ্যান্ডেড সার্চ বার ওপেন হবে (পয়েন্ট ২ ফিক্সড) */}
+      {mobileSearchOpen && (
+        <div className="md:hidden w-full bg-[#1a1a2e] p-3 border-t border-white/10 animate-in slide-in-from-top duration-200">
+          <SearchBar />
+        </div>
+      )}
+
+      {/* 🟦 [3-LEVEL MEGAMENU BAR] — Desktop Only */}
       <div className="bg-white text-gray-700 hidden md:block shadow-sm relative border-b border-gray-100">
         <div className="container-main flex items-center">
-
-          <div
-            className="relative"
-            onMouseEnter={() => setMegaMenuOpen(true)}
-            onMouseLeave={() => setMegaMenuOpen(false)}
-          >
-            {/* 🎯 "Shop by Category" বাটন - থিম কালার ব্যাকগ্রাউন্ড লকড */}
+          <div className="relative" onMouseEnter={() => setMegaMenuOpen(true)} onMouseLeave={() => setMegaMenuOpen(false)}>
             <button className="flex items-center gap-2.5 px-5 py-3.5 bg-[#1a1a2e] font-bold text-sm tracking-wide text-white transition-colors cursor-pointer select-none">
               <Menu size={16} />
               <span>All Category</span>
@@ -354,8 +366,6 @@ export default function Navbar() {
 
             {megaMenuOpen && (
               <div className="absolute top-full left-0 w-[960px] lg:w-[1140px] bg-white border border-gray-100 shadow-2xl rounded-b-2xl z-[99999] flex text-gray-800 animate-in fade-in duration-200 select-none">
-                
-                {/* ১. প্রথম কলাম (Level 1: Main Categories) */}
                 <div className="w-60 bg-gray-50/80 p-2 border-r border-gray-100 flex-shrink-0">
                   <p className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">All Categories</p>
                   <div className="space-y-0.5">
@@ -380,12 +390,10 @@ export default function Navbar() {
                   </div>
                 </div>
 
-                {/* ২. দ্বিতীয় কলাম (Level 2: Sub Categories) */}
                 <div className="w-64 p-3 border-r border-gray-100 min-h-[380px] bg-white flex-shrink-0">
                   <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 pb-2 mb-2">
                     {activeCategory.name} Sub-items
                   </p>
-                  
                   {activeCategory.subCategories && activeCategory.subCategories.length > 0 ? (
                     <div className="space-y-0.5">
                       {activeCategory.subCategories.map((sub: any) => (
@@ -411,14 +419,12 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* ৩. তৃতীয় কলাম (Level 3: Child Categories) */}
                 <div className="flex-1 p-4 bg-gray-50/30 min-h-[380px] animate-in fade-in duration-300">
                   {activeSubCategory ? (
                     <div>
                       <p className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">
                         ⚡ {activeSubCategory.name} Collections
                       </p>
-                      
                       {activeSubCategory.childCategories && activeSubCategory.childCategories.length > 0 ? (
                         <div className="grid grid-cols-2 gap-2">
                           {activeSubCategory.childCategories.map((child: any) => (
@@ -443,12 +449,10 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>
 
-          {/* 🎯 মাঝখানের লিংকগুলোর টেক্সট কালার ডার্ক গ্রে ও হোভার ইফেক্ট ট্র্যাকিং */}
           <div className="flex flex-1 items-center gap-1 pl-4">
             <Link href="/" className="px-4 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#1a1a2e] transition-all flex items-center gap-1.5 uppercase">
               <Home size={13} className="text-gray-400" />
@@ -472,13 +476,11 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* 🎯 "NEW ARRIVALS" বাটন - থিম কালার ব্যাকগ্রাউন্ড লকড */}
           <div className="flex-shrink-0">
             <Link href="/products?tag=featured" className="flex items-center bg-[#1a1a2e] hover:bg-[#111122] text-white text-xs font-black px-6 py-[15px] tracking-wider transition-colors uppercase">
               NEW ARRIVALS
             </Link>
           </div>
-
         </div>
       </div>
 
@@ -540,6 +542,65 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* 📱 📱 [MOBILE FIXED BOTTOM NAVIGATION BAR] — ফেসবুক/দারাজ স্টাইল */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a1a2e] border-t border-white/10 shadow-2xl py-2 px-4 flex items-center justify-between z-[9999]">
+        
+        {/* ১. Home Button */}
+        <Link href="/" className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors">
+          <Home size={20} />
+          <span className="text-[10px] mt-0.5 font-bold">Home</span>
+        </Link>
+
+        {/* ২. Search Expand Toggle Button */}
+        <button 
+          onClick={() => setMobileSearchOpen(!mobileSearchOpen)} 
+          className={`flex flex-col items-center justify-center transition-colors ${mobileSearchOpen ? 'text-white' : 'text-[#a8a6d9] hover:text-white'}`}
+        >
+          <Search size={20} />
+          <span className="text-[10px] mt-0.5 font-bold">Search</span>
+        </button>
+
+        {/* ৩. Categories Button (সাইডবার ড্রয়ার ট্রিগার করবে ভাই) */}
+        <button 
+          onClick={() => { setMobileOpen(true); setMobileSearchOpen(false); }} 
+          className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors"
+        >
+          <Menu size={20} />
+          <span className="text-[10px] mt-0.5 font-bold">Categories</span>
+        </button>
+
+        {/* ৪. Cart Button (ডাউন কাউন্টার ব্যাজ সহ) */}
+        <button 
+          onClick={() => { setCartOpen(true); setMobileSearchOpen(false); }} 
+          className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors relative"
+        >
+          <ShoppingCart size={20} />
+          <span className="text-[10px] mt-0.5 font-bold">Cart</span>
+          {mounted && totalItems > 0 && (
+            <span className="absolute top-0 right-1 bg-red-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
+              {totalItems}
+            </span>
+          )}
+        </button>
+
+        {/* ৫. Account Button (লগইন থাকলে প্রোফাইল অ্যাকশন, না থাকলে লগইন পপআপ) */}
+        <button 
+          onClick={() => {
+            if (isLoggedIn) {
+              setIsDropdownOpen(!isDropdownOpen);
+            } else {
+              setIsAuthModalOpen(true);
+            }
+            setMobileSearchOpen(false);
+          }} 
+          className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors"
+        >
+          <User size={20} />
+          <span className="text-[10px] mt-0.5 font-bold">Account</span>
+        </button>
+
+      </div>
 
       {/* Cart Drawer Component */}
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />

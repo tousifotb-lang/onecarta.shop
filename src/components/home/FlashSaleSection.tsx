@@ -24,10 +24,10 @@ function Countdown() {
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 select-none">
       {[pad(time.h), pad(time.m), pad(time.s)].map((val, i) => (
         <span key={i} className="flex items-center gap-1">
-          <span className="bg-white text-[#2c2769] font-extrabold text-sm px-2 py-1 rounded-lg min-w-[32px] text-center">
+          <span className="bg-white text-[#2c2769] font-extrabold text-sm px-2 py-1 rounded-lg min-w-[32px] text-center shadow-sm">
             {val}
           </span>
           {i < 2 && <span className="text-white font-bold">:</span>}
@@ -50,29 +50,33 @@ export default function FlashSaleSection() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-[#2c2769] to-[#39378c] rounded-2xl px-5 py-4">
+      {/* Header — 🛠️ কাস্টম মোবাইল রেসপন্সিভ ব্যানার */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 bg-gradient-to-r from-[#2c2769] to-[#39378c] rounded-2xl p-4 md:px-5 md:py-4 gap-4 md:gap-0">
+        
+        {/* Left Side: Icon + Text */}
         <div className="flex items-center gap-3">
-          <div className="bg-white/20 p-2 rounded-xl">
+          <div className="bg-white/20 p-2 rounded-xl flex-shrink-0">
             <Zap size={20} className="text-white fill-white" />
           </div>
           <div>
-            <h2 className="text-white font-extrabold text-lg">Flash Sale</h2>
-            <p className="text-white/70 text-xs">Hurry up! Limited stock</p>
+            <h2 className="text-white font-extrabold text-base md:text-lg tracking-tight">Flash Sale</h2>
+            <p className="text-white/70 text-[11px] md:text-xs">Hurry up! Limited stock</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        
+        {/* Right Side: Timer + View All (মোবাইলে ফুল উইডথ জ্যাম-মুক্ত স্পেস) */}
+        <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto border-t border-white/10 pt-3 md:pt-0 md:border-t-0">
           <Countdown />
           <Link
             href="/products?tag=flash-sale"
-            className="bg-white text-[#2c2769] text-xs font-bold px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors hidden sm:block"
+            className="bg-white text-[#2c2769] text-xs font-bold px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
           >
             View All →
           </Link>
         </div>
       </div>
 
-      {/* Products */}
+      {/* Products Grid */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (

@@ -14,21 +14,20 @@ interface CartDrawerProps {
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const router = useRouter();
-  
-  // 🔑 Zustand থেকে ফিল্টারড মেথড এবং অ্যাকশনগুলো নেওয়া হলো
   const { getCartItems, updateQuantity, removeItem, totalPrice } = useCartStore();
-  
-  // 🔒 শুধুমাত্র বর্তমান লগইন থাকা ইউজারের কার্ট আইটেমগুলোই এখানে রেন্ডার হবে
   const items = getCartItems();
 
   const [mounted, setMounted] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
 
+  // 📱 Swipe to Close এর জন্য টাচ স্টেট লজিক
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Handle smooth animation delay during open/close stages
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
@@ -39,6 +38,25 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   }, [isOpen]);
 
   if (!mounted || !isRendered) return null;
+
+  // 🛠️ টাচ হ্যান্ডলার (বাম থেকে ডানে সোয়াইপ ডিটেক্ট করা)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchEnd - touchStart;
+    const isLeftToRightSwipe = distance > 50; // ৫০ পিক্সেলের বেশি ডানে সোয়াইপ হলে বন্ধ হবে
+    if (isLeftToRightSwipe) {
+      onClose();
+    }
+  };
 
   const handleCheckout = () => {
     onClose();
@@ -52,7 +70,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop with transition */}
+      {/* Backdrop */}
       <div 
         className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0"
@@ -60,10 +78,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         onClick={onClose}
       />
 
-      {/* Drawer Container with sliding animation logic */}
-      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+      {/* Drawer Container — 🛠️ ফিক্সড: মোবাইলে বাম পাশে ফাঁকা রাখা ও টাচ ইভেন্ট অ্যাড */}
+      <div 
+        className="absolute inset-y-0 right-0 w-[85vw] md:w-full md:max-w-md flex"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div 
-          className={`w-screen max-w-md bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
+          className={`w-full bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out h-full ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -89,8 +112,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <p className="text-5xl mb-4">🛒</p>
                 <h3 className="font-semibold text-gray-700">Your cart is empty</h3>
                 <p className="text-xs text-gray-400 mt-1">Add some products to get started</p>
-                
-                {/* Back to home inside empty cart as well */}
                 <button 
                   onClick={handleBackToHome}
                   className="mt-4 flex items-center gap-2 text-xs font-bold text-[#2c2769] hover:underline"
@@ -101,8 +122,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               </div>
             ) : (
               items.map((item) => (
-                <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50 animate-in fade-in duration-200">
-                  <div className="relative w-20 h-20 bg-white rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
+                <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
                     <Image 
                       src={item.image || "https://placehold.co/400x400/2c2769/white?text=No+Image"} 
                       alt={item.name}
@@ -113,31 +134,31 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-800 truncate">{item.name}</h4>
-                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{item.brand || item.category}</p>
+                      <h4 className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{item.name}</h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5 capitalize">{item.brand || item.category}</p>
                     </div>
 
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden">
                         <button 
                           onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
+                          className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
                         >
-                          <Minus size={12} />
+                          <Minus size={10} />
                         </button>
-                        <span className="px-2 text-xs font-bold text-gray-700 min-w-[24px] text-center select-none">
+                        <span className="px-1.5 text-xs font-bold text-gray-700 min-w-[20px] text-center select-none">
                           {item.quantity}
                         </span>
                         <button 
                           onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
+                          className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
                           disabled={item.quantity >= item.stock}
                         >
-                          <Plus size={12} />
+                          <Plus size={10} />
                         </button>
                       </div>
 
-                      <span className="text-sm font-bold text-[#2c2769]">
+                      <span className="text-xs sm:text-sm font-bold text-[#2c2769]">
                         {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
@@ -147,20 +168,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     onClick={() => removeItem(item._id)}
                     className="self-start text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))
             )}
           </div>
 
-          {/* Footer Section with Both Buttons */}
+          {/* Footer Section */}
           {items.length > 0 && (
-            <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-3">
+            <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-3 mb-14 md:mb-0">
               <div className="flex items-center justify-between font-bold text-gray-900 mb-1">
-                <span>Subtotal</span>
-                {/* 🔒 ফিল্টারড টোটাল প্রাইস মেথড ও সিঙ্ক করা হলো */}
-                <span className="text-xl text-[#2c2769]">{formatPrice(totalPrice())}</span>
+                <span className="text-sm">Subtotal</span>
+                <span className="text-lg text-[#2c2769]">{formatPrice(totalPrice())}</span>
               </div>
               
               <div className="flex flex-col gap-2">
