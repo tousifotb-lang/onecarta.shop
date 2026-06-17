@@ -6,42 +6,171 @@ import { useRouter } from "next/navigation";
 import {
   ShoppingCart, Heart, User, Menu, X,
   Gift, BookOpen, CreditCard, Store, Package, Phone,
-  ChevronDown, Settings, LogOut, LayoutDashboard
+  ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle
 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import CartDrawer from "@/components/cart/CartDrawer"; 
 import SearchBar from "./SearchBar"; 
 import LoginModal from "@/components/auth/LoginModal"; 
 
-const categories = [
-  { name: "Electronics", slug: "electronics", icon: "📱" },
-  { name: "Fashion", slug: "fashion", icon: "👗" },
-  { name: "Home & Living", slug: "home-living", icon: "🏠" },
-  { name: "Groceries", slug: "groceries", icon: "🛒" },
-  { name: "Sports", slug: "sports", icon: "⚽" },
-  { name: "Beauty", slug: "beauty", icon: "💄" },
-  { name: "Toys", slug: "toys", icon: "🧸" },
-  { name: "Books", slug: "books", icon: "📚" },
+//(Main -> Sub -> Child)
+const categoriesData = [
+  {
+    name: "Electronics",
+    slug: "electronics",
+    icon: "📱",
+    subCategories: [
+      {
+        name: "Smartphones",
+        slug: "smartphones",
+        childCategories: [
+          { name: "Apple iPhones", slug: "apple-iphones" },
+          { name: "Samsung Galaxy", slug: "samsung-galaxy" },
+          { name: "Google Pixel", slug: "google-pixel" },
+          { name: "Xiaomi Phones", slug: "xiaomi-phones" },
+        ]
+      },
+      {
+        name: "Smart Watches",
+        slug: "smart-watches",
+        childCategories: [
+          { name: "Apple Watch Series", slug: "apple-watch" },
+          { name: "Galaxy Active", slug: "galaxy-active" },
+          { name: "Amazfit Smart", slug: "amazfit" },
+        ]
+      },
+      {
+        name: "Power Banks",
+        slug: "power-banks",
+        childCategories: [
+          { name: "Anker Fast Charge", slug: "anker" },
+          { name: "Baseus Power", slug: "baseus" },
+        ]
+      },
+      {
+        name: "Charging Cables",
+        slug: "charging-cables",
+        childCategories: [
+          { name: "Type-C Premium", slug: "type-c" },
+          { name: "Lightning Cables", slug: "lightning" },
+        ]
+      },
+      {
+        name: "Bluetooth Speakers",
+        slug: "bluetooth-speakers",
+        childCategories: [
+          { name: "JBL Portable", slug: "jbl" },
+          { name: "Anker Soundcore", slug: "soundcore" },
+        ]
+      },
+    ]
+  },
+  {
+    name: "Fashion",
+    slug: "fashion",
+    icon: "👗",
+    subCategories: [
+      {
+        name: "Men's Casual Polo",
+        slug: "mens-polo",
+        childCategories: [
+          { name: "Slim Fit Polo", slug: "slim-fit" },
+          { name: "Oversized Polo", slug: "oversized" },
+        ]
+      },
+      {
+        name: "Gents Watches",
+        slug: "gents-watches",
+        childCategories: [
+          { name: "Casio Edifice", slug: "casio" },
+          { name: "Curren Analogue", slug: "curren" },
+        ]
+      },
+      {
+        name: "Leather Wallets",
+        slug: "leather-wallets",
+        childCategories: [
+          { name: "Bi-Fold Wallets", slug: "bifold" },
+          { name: "Card Holders", slug: "card-holders" },
+        ]
+      },
+    ]
+  },
+  {
+    name: "Home & Living",
+    slug: "home-living",
+    icon: "🏠",
+    subCategories: [
+      {
+        name: "Smart Lights",
+        slug: "smart-lights",
+        childCategories: [
+          { name: "Philips Hue", slug: "philips-hue" },
+          { name: "RGB LED Strips", slug: "rgb-strips" },
+        ]
+      },
+      {
+        name: "Kitchen Tools",
+        slug: "kitchen-tools",
+        childCategories: [
+          { name: "Blenders & Juicers", slug: "blenders" },
+          { name: "Air Fryers", slug: "air-fryers" },
+        ]
+      },
+    ]
+  },
+  {
+    name: "Groceries",
+    slug: "groceries",
+    icon: "🛒",
+    subCategories: [
+      {
+        name: "Fresh Fruits",
+        slug: "fresh-fruits",
+        childCategories: [
+          { name: "Imported Apples", slug: "apples" },
+          { name: "Organic Bananas", slug: "bananas" },
+        ]
+      },
+    ]
+  },
+  {
+    name: "Sports",
+    slug: "sports",
+    icon: "⚽",
+    subCategories: [
+      {
+        name: "Football Jerseys",
+        slug: "football-jerseys",
+        childCategories: [
+          { name: "Bangladesh National", slug: "bd-jersey" },
+          { name: "Club Jerseys", slug: "club-jersey" },
+        ]
+      },
+    ]
+  },
+  { name: "Beauty", slug: "beauty", icon: "💄", subCategories: [] },
+  { name: "Toys", slug: "toys", icon: "🧸", subCategories: [] },
+  { name: "Books", slug: "books", icon: "📚", subCategories: [] },
 ];
 
 export default function Navbar() {
   const router = useRouter();
   
-  // 🔑 Zustand থেকে ইউনিক মাল্টি-ইউজার কার্ট ডাটা নেওয়া হলো অনুপাত ঠিক রাখতে
   const { getCartItems } = useCartStore();
   const currentCartItems = getCartItems();
-  
-  // 🔒 শুধুমাত্র কারেন্ট ইউজারের প্রোডাক্টের টোটাল সংখ্যা হিসাব করার ডাইনামিক লজিক
   const totalItems = currentCartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+  
+  const [activeCategory, setActiveCategory] = useState(categoriesData[0]); 
+  const [activeSubCategory, setActiveSubCategory] = useState<any>(categoriesData[0].subCategories[0] || null);
   
   const [cartOpen, setCartOpen] = useState(false);
   const [isAnimate, setIsAnimate] = useState(false);
   
-  // 🔐 Authentication & Dropdown States
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -58,6 +187,15 @@ export default function Navbar() {
       setUserName(storedName && storedName !== "undefined" && storedName !== "User" ? storedName : "Tousif"); 
     }
   }, []);
+
+  const handleCategoryHover = (cat: any) => {
+    setActiveCategory(cat);
+    if (cat.subCategories && cat.subCategories.length > 0) {
+      setActiveSubCategory(cat.subCategories[0]);
+    } else {
+      setActiveSubCategory(null);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -92,11 +230,11 @@ export default function Navbar() {
         <div className="container-main flex items-center justify-between">
           <div className="flex items-center gap-1 text-gray-600 font-medium">
             <Phone size={12} />
-            <span>09638001122</span>
+            <span>01303223513</span>
           </div>
           <div className="flex items-center gap-4 text-gray-600 font-medium">
             <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]">
-              <Package size={12} /> ORDER TRACKING
+              <Package size={12} /> ORDER STATUS
             </Link>
             <Link href="/gifts" className="flex items-center gap-1 hover:text-[#2c2769]">
               <Gift size={12} /> GIFT
@@ -119,20 +257,13 @@ export default function Navbar() {
         <div className="container-main flex items-center gap-2 md:gap-4 py-2.5">
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-1.5 text-white flex-shrink-0"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
+          <button className="md:hidden p-1.5 text-white flex-shrink-0" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
           {/* Logo */}
           <Link href="/" className="flex-shrink-0 flex items-center">
-            <img 
-              src="/logo/logo.png" 
-              alt="onecarta logo" 
-              className="h-8 md:h-10 w-auto object-contain transition-transform hover:scale-105" 
-            />
+            <img src="/logo/logo.png" alt="onecarta logo" className="h-8 md:h-10 w-auto object-contain transition-transform hover:scale-105" />
           </Link>
 
           {/* Search Bar */}
@@ -140,165 +271,214 @@ export default function Navbar() {
 
           {/* Action Icons */}
           <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-
-            {/* Offer — desktop only */}
-            <Link
-              href="/offers"
-              className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            >
+            <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
               <Gift size={13} /> OFFER
             </Link>
 
-            {/* Wishlist */}
-            <Link
-              href="/wishlist"
-              className="relative p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9]"
-            >
+            <Link href="/wishlist" className="relative p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9]">
               <Heart size={18} />
               <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
             </Link>
 
-            {/* Cart Button with Drawer Trigger */}
             <button
               onClick={() => setCartOpen(true)}
-              className={`relative p-1.5 flex items-center gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 md:py-1.5 md:rounded-lg md:text-xs md:font-bold text-[#a8a6d9] transition-all duration-300 ${
+              className={`relative p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${
                 isAnimate ? "scale-110 bg-white/10" : "scale-100"
               }`}
             >
               <ShoppingCart size={18} className={`${isAnimate ? "animate-bounce" : ""}`} />
               <span className="hidden lg:block text-xs font-bold">CART</span>
               {mounted && totalItems > 0 && (
-                <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-transform duration-300 ${
-                  isAnimate ? "scale-125" : "scale-100"
-                }`}>
+                <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-transform duration-300 ${isAnimate ? "scale-125" : "scale-100"}`}>
                   {totalItems > 99 ? "99+" : totalItems}
                 </span>
               )}
             </button>
 
-            {/* Auth Button */}
             {!isLoggedIn ? (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] cursor-pointer"
-              >
+              <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 md:flex md:items-center md:gap-1.5 md:border md:border-[#a8a6d9] md:text-white md:hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] cursor-pointer">
                 <User size={18} />
                 <span className="hidden lg:block text-xs font-bold">LOGIN</span>
               </button>
             ) : (
               <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer"
-                >
+                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer">
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs shadow-inner uppercase">
-                    {userName ? userName[0] : "T"} 
+                    {userName[0]} 
                   </div>
                   <ChevronDown size={12} className={`text-gray-300 transition-transform duration-200 hidden md:block ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2.5 w-52 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[9999] text-gray-800 animate-in fade-in slide-in-from-top-3 duration-200">
                     <div className="px-4 py-2 border-b border-gray-50">
                       <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Welcome back</p>
-                      <p className="text-xs font-extrabold text-gray-700 truncate capitalize">
-                        {userName}
-                      </p>
+                      <p className="text-xs font-extrabold text-gray-700 truncate capitalize">{userName}</p>
                     </div>
-
                     <div className="p-1 space-y-0.5">
-                      <button
-                        onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl transition-colors text-left"
-                      >
-                        <User size={14} className="text-gray-400" />
-                        View Profile
+                      <button onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl transition-colors text-left">
+                        <User size={14} className="text-gray-400" />View Profile
                       </button>
-
-                      <button
-                        onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl transition-colors text-left"
-                      >
-                        <LayoutDashboard size={14} className="text-gray-400" />
-                        Manage Account
-                      </button>
-
-                      <button
-                        onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl transition-colors text-left"
-                      >
-                        <Settings size={14} className="text-gray-400" />
-                        Settings
+                      <button onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl transition-colors text-left">
+                        <LayoutDashboard size={14} className="text-gray-400" />Manage Account
                       </button>
                     </div>
-
                     <div className="p-1 border-t border-gray-50 mt-1">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors text-left"
-                      >
-                        <LogOut size={14} />
-                        Log Out
+                      <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors text-left">
+                        <LogOut size={14} />Log Out
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             )}
-
           </div>
         </div>
       </div>
 
-      {/* Category Nav — desktop only */}
-      <div className="bg-white border-b border-gray-200 hidden md:block shadow-sm">
+      {/* 🟦 [3-LEVEL MEGAMENU BAR] — 🛠️ কাস্টম ফিক্সড: ব্যাকগ্রাউন্ড সাদা, টেক্সট ডার্ক, বাটন দুটি থিম কালার */}
+      <div className="bg-white text-gray-700 hidden md:block shadow-sm relative border-b border-gray-100">
         <div className="container-main flex items-center">
 
-          {/* Hamburger */}
           <div
-            className="relative flex-shrink-0"
-            onMouseEnter={() => setCatOpen(true)}
-            onMouseLeave={() => setCatOpen(false)}
+            className="relative"
+            onMouseEnter={() => setMegaMenuOpen(true)}
+            onMouseLeave={() => setMegaMenuOpen(false)}
           >
-            <button className="flex items-center px-4 py-3 border-r border-gray-200 text-gray-700 hover:text-[#2c2769] transition-colors">
+            {/* 🎯 "Shop by Category" বাটন - থিম কালার ব্যাকগ্রাউন্ড লকড */}
+            <button className="flex items-center gap-2.5 px-5 py-3.5 bg-[#1a1a2e] font-bold text-sm tracking-wide text-white transition-colors cursor-pointer select-none">
               <Menu size={16} />
+              <span>All Category</span>
+              <ChevronDown size={14} className={`transition-transform duration-200 ${megaMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-            {catOpen && (
-              <div className="absolute top-full left-0 w-56 bg-white border border-gray-100 rounded-b-xl shadow-xl z-50 py-2">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href={`/products?category=${cat.slug}`}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#eeedf5] hover:text-[#2c2769] transition-colors"
-                  >
-                    <span>{cat.icon}</span> {cat.name}
-                  </Link>
-                ))}
+
+            {megaMenuOpen && (
+              <div className="absolute top-full left-0 w-[960px] lg:w-[1140px] bg-white border border-gray-100 shadow-2xl rounded-b-2xl z-[99999] flex text-gray-800 animate-in fade-in duration-200 select-none">
+                
+                {/* ১. প্রথম কলাম (Level 1: Main Categories) */}
+                <div className="w-60 bg-gray-50/80 p-2 border-r border-gray-100 flex-shrink-0">
+                  <p className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">All Categories</p>
+                  <div className="space-y-0.5">
+                    {categoriesData.map((cat) => (
+                      <div
+                        key={cat.slug}
+                        onMouseEnter={() => handleCategoryHover(cat)}
+                        onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${cat.slug}`); }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          activeCategory.slug === cat.slug 
+                            ? "bg-white border-l-4 border-[#1a1a2e] text-[#1a1a2e] shadow-sm pl-4" 
+                            : "text-gray-600 hover:bg-gray-100/70"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm">{cat.icon}</span>
+                          <span>{cat.name}</span>
+                        </div>
+                        <ChevronRight size={12} className={activeCategory.slug === cat.slug ? "text-[#1a1a2e]" : "text-gray-300"} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ২. দ্বিতীয় কলাম (Level 2: Sub Categories) */}
+                <div className="w-64 p-3 border-r border-gray-100 min-h-[380px] bg-white flex-shrink-0">
+                  <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 pb-2 mb-2">
+                    {activeCategory.name} Sub-items
+                  </p>
+                  
+                  {activeCategory.subCategories && activeCategory.subCategories.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {activeCategory.subCategories.map((sub: any) => (
+                        <div
+                          key={sub.slug}
+                          onMouseEnter={() => setActiveSubCategory(sub)}
+                          onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }}
+                          className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            activeSubCategory && activeSubCategory.slug === sub.slug 
+                              ? "bg-[#eeedf5] text-[#1a1a2e]" 
+                              : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className="truncate">{sub.name}</span>
+                          {sub.childCategories && sub.childCategories.length > 0 && (
+                            <ChevronRight size={11} className={activeSubCategory && activeSubCategory.slug === sub.slug ? "text-[#1a1a2e]" : "text-gray-300"} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>
+                  )}
+                </div>
+
+                {/* ৩. তৃতীয় কলাম (Level 3: Child Categories) */}
+                <div className="flex-1 p-4 bg-gray-50/30 min-h-[380px] animate-in fade-in duration-300">
+                  {activeSubCategory ? (
+                    <div>
+                      <p className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">
+                        ⚡ {activeSubCategory.name} Collections
+                      </p>
+                      
+                      {activeSubCategory.childCategories && activeSubCategory.childCategories.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {activeSubCategory.childCategories.map((child: any) => (
+                            <Link
+                              key={child.slug}
+                              href={`/products?category=${activeCategory.slug}&sub=${activeSubCategory.slug}&child=${child.slug}`}
+                              onClick={() => setMegaMenuOpen(false)}
+                              className="text-xs font-semibold text-gray-600 hover:text-[#1a1a2e] hover:bg-white p-2 rounded-lg border border-transparent hover:border-gray-100 shadow-sm/none hover:shadow-sm transition-all flex items-center gap-1.5 group/child"
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover/child:bg-[#1a1a2e] transition-colors" />
+                              <span>{child.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic p-1">No deeper classifications found</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-center text-gray-300 text-xs font-medium p-4">
+                      Hover over any sub-item to unveil specific micro-genres
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
           </div>
 
-          <div className="flex flex-1 items-center justify-between">
-            {categories.map((cat) => (
-              <Link
-                key={cat.slug}
-                href={`/products?category=${cat.slug}`}
-                className="px-3 py-3 text-[14px] font-semibold text-gray-700 hover:text-[#2c2769] transition-colors uppercase tracking-wide whitespace-nowrap"
-              >
-                {cat.name}
-              </Link>
-            ))}
+          {/* 🎯 মাঝখানের লিংকগুলোর টেক্সট কালার ডার্ক গ্রে ও হোভার ইফেক্ট ট্র্যাকিং */}
+          <div className="flex flex-1 items-center gap-1 pl-4">
+            <Link href="/" className="px-4 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#1a1a2e] transition-all flex items-center gap-1.5 uppercase">
+              <Home size={13} className="text-gray-400" />
+              <span>Home</span>
+            </Link>
+            <Link href="/offers" className="px-4 py-3.5 text-xs font-bold text-red-500 hover:bg-gray-50 transition-all flex items-center gap-1.5 uppercase">
+              <Gift size={13} className="text-red-400" />
+              <span>Special Offers</span>
+            </Link>
+            <Link href="/products" className="px-4 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#1a1a2e] transition-all flex items-center gap-1.5 uppercase">
+              <Store size={13} className="text-gray-400" />
+              <span>Shop</span>
+            </Link>
+            <Link href="/about" className="px-4 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#1a1a2e] transition-all flex items-center gap-1.5 uppercase">
+              <Info size={13} className="text-gray-400" />
+              <span>Our Story</span>
+            </Link>
+            <Link href="/contact" className="px-4 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#1a1a2e] transition-all flex items-center gap-1.5 uppercase">
+              <HelpCircle size={13} className="text-gray-400" />
+              <span>Support</span>
+            </Link>
           </div>
 
+          {/* 🎯 "NEW ARRIVALS" বাটন - থিম কালার ব্যাকগ্রাউন্ড লকড */}
           <div className="flex-shrink-0">
-            <Link
-              href="/products?tag=featured"
-              className="flex items-center bg-[#2c2769] hover:bg-[#39378c] text-white text-[11px] font-extrabold px-5 py-3 tracking-wider transition-colors uppercase whitespace-nowrap"
-            >
+            <Link href="/products?tag=featured" className="flex items-center bg-[#1a1a2e] hover:bg-[#111122] text-white text-xs font-black px-6 py-[15px] tracking-wider transition-colors uppercase">
               NEW ARRIVALS
             </Link>
           </div>
+
         </div>
       </div>
 
@@ -308,54 +488,28 @@ export default function Navbar() {
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-72 bg-[#1a1a2e] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <img 
-                src="/logo/logo.png" 
-                alt="onecarta logo" 
-                className="h-8 w-auto object-contain" 
-              />
-              <button onClick={() => setMobileOpen(false)} className="text-white">
-                <X size={20} />
-              </button>
+              <img src="/logo/logo.png" alt="onecarta logo" className="h-8 w-auto object-contain" />
+              <button onClick={() => setMobileOpen(false)} className="text-white"><X size={20} /></button>
             </div>
 
-            {/* Mobile Authentication Area */}
             {!isLoggedIn ? (
               <div className="flex gap-2 p-4 border-b border-white/10">
-                <button
-                  className="flex-1 text-center border border-[#a8a6d9] text-[#a8a6d9] py-2 rounded-lg text-sm font-bold cursor-pointer"
-                  onClick={() => { setMobileOpen(false); setIsAuthModalOpen(true); }}
-                >
-                  Login
-                </button>
-                <button
-                  className="flex-1 text-center bg-[#2c2769] text-white py-2 rounded-lg text-sm font-bold cursor-pointer"
-                  onClick={() => { setMobileOpen(false); setIsAuthModalOpen(true); }}
-                >
-                  Register
-                </button>
+                <button className="flex-1 text-center border border-[#a8a6d9] text-[#a8a6d9] py-2 rounded-lg text-sm font-bold cursor-pointer" onClick={() => { setMobileOpen(false); setIsAuthModalOpen(true); }}>Login</button>
+                <button className="flex-1 text-center bg-[#2c2769] text-white py-2 rounded-lg text-sm font-bold cursor-pointer" onClick={() => { setMobileOpen(false); setIsAuthModalOpen(true); }}>Register</button>
               </div>
             ) : (
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs uppercase">
-                    {userName ? userName[0] : "T"}
-                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs uppercase">{userName[0]}</div>
                   <span className="text-sm font-bold text-white max-w-[120px] truncate capitalize">{userName}</span>
                 </div>
-                <button 
-                  onClick={handleLogout}
-                  className="text-xs font-bold text-red-400 bg-red-500/10 px-2.5 py-1.5 rounded-lg"
-                >
-                  Logout
-                </button>
+                <button onClick={handleLogout} className="text-xs font-bold text-red-400 bg-red-500/10 px-2.5 py-1.5 rounded-lg">Logout</button>
               </div>
             )}
 
             <div className="py-2">
-              <p className="px-4 py-2 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                Categories
-              </p>
-              {categories.map((cat) => (
+              <p className="px-4 py-2 text-xs text-gray-500 uppercase font-bold tracking-wider">Categories</p>
+              {categoriesData.map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/products?category=${cat.slug}`}
@@ -369,22 +523,15 @@ export default function Navbar() {
             </div>
 
             <div className="py-2 border-t border-white/10">
-              <p className="px-4 py-2 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                Quick Links
-              </p>
+              <p className="px-4 py-2 text-xs text-gray-500 uppercase font-bold tracking-wider">Quick Links</p>
               {[
-                { name: "Order Tracking", href: "/track-order", icon: "📦" },
+                { name: "Order Status", href: "/track-order", icon: "📦" },
                 { name: "EMI Policy", href: "/emi", icon: "💳" },
                 { name: "Store Location", href: "/store", icon: "📍" },
                 { name: "Blogs", href: "/blog", icon: "📝" },
                 { name: "My Dashboard", href: "/dashboard", icon: "👤" },
               ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
+                <Link key={link.href} href={link.href} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors" onClick={() => setMobileOpen(false)}>
                   <span>{link.icon}</span>
                   <span>{link.name}</span>
                 </Link>

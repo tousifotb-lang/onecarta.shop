@@ -14,7 +14,13 @@ interface CartDrawerProps {
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const router = useRouter();
-  const { items, updateQuantity, removeItem, totalPrice } = useCartStore();
+  
+  // 🔑 Zustand থেকে ফিল্টারড মেথড এবং অ্যাকশনগুলো নেওয়া হলো
+  const { getCartItems, updateQuantity, removeItem, totalPrice } = useCartStore();
+  
+  // 🔒 শুধুমাত্র বর্তমান লগইন থাকা ইউজারের কার্ট আইটেমগুলোই এখানে রেন্ডার হবে
+  const items = getCartItems();
+
   const [mounted, setMounted] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
 
@@ -95,7 +101,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               </div>
             ) : (
               items.map((item) => (
-                <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50">
+                <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50 animate-in fade-in duration-200">
                   <div className="relative w-20 h-20 bg-white rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
                     <Image 
                       src={item.image || "https://placehold.co/400x400/2c2769/white?text=No+Image"} 
@@ -115,16 +121,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden">
                         <button 
                           onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors"
+                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
                         >
                           <Minus size={12} />
                         </button>
-                        <span className="px-2 text-xs font-bold text-gray-700 min-w-[24px] text-center">
+                        <span className="px-2 text-xs font-bold text-gray-700 min-w-[24px] text-center select-none">
                           {item.quantity}
                         </span>
                         <button 
                           onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors"
+                          className="p-1 px-2 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
                           disabled={item.quantity >= item.stock}
                         >
                           <Plus size={12} />
@@ -139,7 +145,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                   <button 
                     onClick={() => removeItem(item._id)}
-                    className="self-start text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                    className="self-start text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -153,20 +159,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-3">
               <div className="flex items-center justify-between font-bold text-gray-900 mb-1">
                 <span>Subtotal</span>
+                {/* 🔒 ফিল্টারড টোটাল প্রাইস মেথড ও সিঙ্ক করা হলো */}
                 <span className="text-xl text-[#2c2769]">{formatPrice(totalPrice())}</span>
               </div>
               
               <div className="flex flex-col gap-2">
                 <button 
                   onClick={handleCheckout}
-                  className="w-full bg-[#2c2769] hover:bg-[#39378c] text-white py-3 rounded-xl font-bold text-sm transition-colors shadow-md shadow-[#2c2769]/10"
+                  className="w-full bg-[#2c2769] hover:bg-[#39378c] text-white py-3 rounded-xl font-bold text-sm transition-colors shadow-md shadow-[#2c2769]/10 cursor-pointer"
                 >
                   Proceed to Checkout
                 </button>
 
                 <button 
                   onClick={handleBackToHome}
-                  className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Home size={14} className="text-gray-500" />
                   <span>Back to Home</span>

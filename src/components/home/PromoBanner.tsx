@@ -1,6 +1,8 @@
+"use client";
+
 export default function PromoBanner() {
   return (
-    <div className="flex items-center justify-center bg-white rounded-xl px-3 py-3 shadow-sm">
+    <div className="flex items-center justify-center bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100/50">
       {[
         { title: "Free Delivery", subtitle: "Above ৳999", icon: "🚚" },
         { title: "Secure Payment", subtitle: "bKash, Nagad, COD", icon: "🔒" },
@@ -8,14 +10,15 @@ export default function PromoBanner() {
       ].map((item, i) => (
         <div
           key={item.title}
-          className={`flex items-center gap-2 flex-1 min-w-0 ${
-            i !== 0 ? "border-l border-gray-100 pl-3 ml-3" : ""
+          /* 🛠️ ফিক্সড লজیک: justify-center যুক্ত করা হলো যাতে কন্টেন্ট একদম সেন্টারে থাকে এবং pl/ml এডজাস্ট করা হলো */
+          className={`flex items-center justify-center gap-3.5 flex-1 min-w-0 ${
+            i !== 0 ? "border-l border-gray-100 pl-4 ml-4" : ""
           }`}
         >
-          <span className="text-lg flex-shrink-0">{item.icon}</span>
-          <div className="min-w-0 overflow-hidden">
-            <p className="text-[11px] font-bold text-gray-800 truncate">{item.title}</p>
-            <p className="text-[10px] text-gray-500 truncate">{item.subtitle}</p>
+          <span className="text-2xl flex-shrink-0 select-none">{item.icon}</span>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-gray-800 tracking-tight leading-tight">{item.title}</p>
+            <p className="text-[11px] text-gray-400 font-semibold mt-0.5">{item.subtitle}</p>
           </div>
         </div>
       ))}

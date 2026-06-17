@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MapPin, Trash2, Search, ChevronDown, Home, Briefcase, PlusCircle, User, Phone } from "lucide-react";
+import Link from "next/link";
+import { 
+  MapPin, Trash2, Search, ChevronDown, Home, Briefcase, 
+  PlusCircle, User, Phone, Package, Heart, Settings, 
+  LogOut, ChevronRight, Mail, Calendar, Users, X, CheckCircle2, ArrowUpRight
+} from "lucide-react";
 
 interface SavedAddress {
   id: string;
@@ -11,84 +16,68 @@ interface SavedAddress {
   district: string;
   thana: string;
   homeAddress: string;
+  isDefault: boolean;
 }
 
+const initialOrders = [
+  {
+    id: "3668101",
+    date: "17 Nov 2025",
+    total: "৳৫৯৯",
+    status: "Processing",
+    isPaid: true,
+    items: "Men's Casual Polo Shirt - Rich Man (Qty: 1)",
+    productUrl: "/products?category=fashion&sub=mens-polo",
+    timeline: [
+      { title: "Order Placed", time: "17 Nov 2025 09:06 pm", desc: "Your order is successfully placed to Onecarta.", done: true },
+      { title: "Processing", time: "17 Nov 2025 09:06 pm", desc: "We have received your order, our team will check and confirm shortly.", done: true },
+      { title: "Confirmed", time: "Pending", desc: "Waiting for confirmation.", done: false },
+      { title: "Packing", time: "Pending", desc: "We are currently packing your order.", done: false },
+      { title: "Delivered", time: "Pending", desc: "You have received your order.", done: false }
+    ]
+  },
+  {
+    id: "3654200",
+    date: "12 Nov 2025",
+    total: "৳৪,৫০০",
+    status: "Delivered",
+    isPaid: true,
+    items: "LEGO Classic Creative Bricks (Qty: 1)",
+    productUrl: "/products?category=toys",
+    timeline: [
+      { title: "Order Placed", time: "12 Nov 2025 10:15 am", desc: "Your order is successfully placed.", done: true },
+      { title: "Processing", time: "12 Nov 2025 11:00 am", desc: "Order processed successfully.", done: true },
+      { title: "Confirmed", time: "12 Nov 2025 02:30 pm", desc: "Order confirmed.", done: true },
+      { title: "Packing", time: "12 Nov 2025 05:00 pm", desc: "Your order is packed now.", done: true },
+      { title: "Delivered", time: "14 Nov 2025 04:20 pm", desc: "You have received your order. Thank you!", done: true }
+    ]
+  }
+];
+
 const locationData: Record<string, string[]> = {
-  "Norshingdi": ["Sadar", "Monorhordi", "Shibpur", "Palash", "Belab", "Raipura"],
-  "Narayangonj": ["Sadar", "Bandor", "Sonargaon", "Arai Hazar", "Rupgonj"],
-  "Munshigonj": ["Sadar", "Tungibari", "Louhagonj", "Sree Nagar", "Sirajdi Khan", "Gazaria"],
-  "Gazipur": ["Sadar", "Tongi", "kaligonj", "Kaliakoir", "Kapashia", "Sreepur"],
-  "Manikgonj": ["Sadar", "Singair", "Daulatpur", "Horirampur", "Gheor", "Shibaloy", "Saturia"],
-  "Dhaka": ["Kotwali", "Mohammadpur", "Lalbagh", "Sutrapur", "Motijgil", "Demra", "Sabujbagh", "Mirpur", "Gulshan", "Uttara", "Pallabi", "Cantonment", "Dhanmondi", "Tejgaon", "Ramna", "Keranigonj", "Dohar", "Nawabgonj", "Savar", "Dhamrai"],
-  "Faridpur": ["Sadar", "Boalmari", "Sadarpur", "Char Bhadrashon", "Bhanga", "Nagarkanda", "Madhukhali", "Alphadanga", "SalThanaa"],
-  "Rajbari": ["Sadar", "Pangsha", "Goalondo", "Kalukhali", "Baliakandi"],
-  "Gopalgonj": ["Sadar", "kashiani", "Tongipara", "Muksudpur", "Kotalipara"],
-  "Madaripur": ["Sadar", "Kalkini", "Rajoir", "Shibchar"],
-  "Sariyatpur": ["Sadar", "Damudda", "Noria", "Jagira", "Vedorgonj", "Goshair Hat"],
-  "Borguna": ["Sadar", "Amtoli", "Betagi", "Taltoli", "PaThanaorghata", "Bamna"],
-  "Bhola": ["Sadar", "Daulatkhan", "Lalmohon", "Monpura", "Charfassion", "Tajumuddin", "Borhanuddin"],
-  "Jhaloka Thanai": ["Sadar", "Nalchiti", "Rajapur", "KaThanaalia"],
-  "Barishal": ["Sadar", "Muladi", "Gournadi", "Agoil Jhora", "Hijla", "Ujirpur", "Mehedigonj", "Babugonj", "Bakergonj", "Banaripara"],
-  "Patuakhali": ["Sadar", "Golachipa", "Kolapara", "Dosmina", "Bauphal", "Rangabali", "Dumki", "Mirjagonj"],
-  "Perojpur": ["Sadar", "Mo Thanabaria", "Nazirpur", "Nesarabad", "Zianagar", "kaukhali", "Bhandaria"],
-  "Khulna": ["Sadar Thana", "Sonadanga", "Daulatpur", "Phultola", "Dumuria", "Terokhada", "Degholia", "Rupsha", "Batiaghata", "Dakop", "Koira"],
-  "Norail": ["Sadar", "Kalia", "Lohagora"],
-  "Magura": ["Sadar", "Sreepur", "Salikha", "Mohammadpur"],
-  "Satkhira": ["Sadar", "Shyam nagar", "Assa suni", "Tala", "Kaligonj", "Kolaroa", "Debhata"],
-  "Bagerhat": ["Sadar", "Kochua", "Rampal", "Saron Khola", "Morolgonj", "Mollarhat", "Chitolmari", "Fakirhat", "Mongla"],
-  "Jhenaidah": ["Sadar", "kaligonj", "Kot Chandpur", "Horina Kundu", "Shyola Kupa", "Moheshpur"],
-  "Jessore": ["Sadar", "Keshobpur", "Jhikor gacha", "Monirampur", "Bagharpara", "Chowgacha", "Sharsha", "Avoynagar"],
-  "Meherpur": ["Sadar", "Gangni", "Mujib Nagar"],
-  "Chuadanga": ["Sadar", "Jibon Nagar", "Damur Huda", "Almdanga"],
-  "Kushtia": ["Sadar", "Kumarkhali", "Daulatpur", "Bheramara", "Khoksha", "Mirpur"],
-  "Sylhet": ["Sadar", "Gopalgonj", "Biwanibazar", "Jokigonj", "Companigonj", "Jaintapur", "Daxin Surma", "Fenchugonj", "Bishwana Thana", "Balagonj", "Gowainghat", "Kanaighat"],
-  "Sunamgonj": ["Sadar", "Jamalgonj", "Jaganna Thanapur", "Sulla", "Dharam Pasha", "Bishwambharpur", "Sou Thana Sunamgonj", "Satok", "Deora Bazar", "Derai", "Tahirpur"],
-  "Mowlovibazar": ["Sadar", "Rajnagar", "Kulaura", "Juri", "Boro Lekha", "Komolgonj", "Srimangal"],
-  "Hobigonj": ["Sadar", "Bahubal", "Lakhai", "Nobigonj", "Chunarughat", "Madhabpur", "Benia Chang", "Ajmirigonj"],
-  "Tangail": ["Sadar", "Delduar", "Mirjapur", "Bhuapur", "Ghatail", "Bashail", "Nagorpur", "Kalihati", "Sokhipur", "Gopalpur", "Dhanbari", "Madhupur"],
-  "Keshoregonj": ["Sadar", "Hossainpur", "Karimgonj", "Pakundia", "Nikli", "Bajitpur", "Kuliarchar", "Bhairab", "MeThanaa Moin", "Itna", "Kotiadi", "Osto gram", "Tarail"],
-  "Netrokona": ["Sadar", "Atpara", "Barhatta", "Mohongonj", "Kalmakanda", "Durgapur", "Madan", "Kendua", "Purbodhola", "Khalia Juri"],
-  "Jamalpur": ["Sadar", "Islampur", "Dewangonj", "Sarisha Bari", "Madargonj", "Bokshigonj", "Melandaha"],
-  "Sherpur": ["Sadar", "Nalka", "Nalitabari", "Jhenaigati", "Sribordi"],
-  "Mymensingh": ["Sadar", "Muktagacha", "Phulbaria", "Bhaluka", "Trishal", "Gofor gaon", "Nandail", "Ishwargonj", "Dhobaura", "Gouripur", "Phulpur", "Haluaghat", "Tarakanda"],
-  "Noakhali": ["Sadar", "Begumgonj", "Companigonj", "Subornocha", "Sunaimuri", "Chatkhil", "Shenbagh", "Kabirhat", "Hatia"],
-  "Feni": ["Sadar", "Dagon Bhuiyan", "Fulgazi", "Porshuram", "Sagalnaiya", "Sonagazi"],
-  "Laxmipur": ["Sadar", "Raipur", "Ramgoti", "Ramgonj", "Kamalnagar"],
-  "Chandpur": ["Sadar", "Matlab Sou Thana", "Faridgonj", "Hajigonj", "Haimchar", "Matlab Nor Thana", "Kochua", "Shaharasti"],
-  "B. Baria": ["Sadar", "Sarail", "Kosba", "Bancharampur", "Nabinagar", "Bijoy Nagar", "Ashugonj", "Akhaura", "Nasir Nagar"],
-  "Comilla": ["Sadar Adarsho", "Sadar Sou Thana", "Brahman Para", "Daoud Kandi", "Buri Chang", "Choddo Gram", "Laksham", "Monohorgonj", "Meghna", "Homna", "Titas", "Nangolkot", "Muradnagar", "Barura", "Chandina", "Dabidar"],
-  "Chittagonj": ["Kotwali", "Panchlaish", "Chandgaon", "Bandor", "Pahartoli", "Double Muring", "Anwara", "Putia", "Boalkhali", "Satkania", "Chanda Naish", "Bash Khali", "Lohagora", "Sandip", "HaThanaajari", "Mirasharai", "Fatik Chari", "Rangunia", "Sitakundu", "Raujan"],
-  "Cox's Bazar": ["Sadar", "Moheshkhali", "Kutubdia", "Teknaf", "Ramu", "Ukhia", "Chokoria", "Pekua"],
-  "Khagrachari": ["Sadar", "Panchari", "Mohalchari", "Dighinala", "Matiranga", "Laxmichari", "Manikchari", "Ramgarh"],
-  "Bandarbon": ["Sadar", "Thanaanchi", "Ruma", "Roang chari", "Alikadam", "Lama", "Naikhang Chari"],
-  "Rangamati": ["Sadar", "Barkal", "Longodu", "Baghaichari", "Naniar Char", "Kao Khali", "Rajas Thanaali", "Belaichari", "Jurachari", "kaptai"],
-  "Bogra": ["Sadar", "Shajahanpur", "Saria Kandi", "Shibgonj", "Gabtoli", "Dhunot", "Sonatola", "Dupchachia", "Adamdighi", "Nandigram", "Sherpur", "Kahalu"],
-  "Pabna": ["Sadar", "Atghoria", "Ishwardi", "Bera", "SaThanaia", "Sujanagar", "Chatmohor", "Bhangura", "Faridpur"],
-  "Rajshahi": ["Boalia", "Rajpara", "Poba", "Putia", "Charghat", "Tanor", "Baghmara", "Bagha", "Mohonpur", "Godagri", "Durgapur"],
-  "Natore": ["Sadar", "Singra", "Bagatipara", "Boraigram", "Gurudaspur", "Lalpur", "Naldanga"],
-  "Chapai N. Gonj": ["Sadar", "Shibgonj", "Gomostapur", "Nachol", "Bholahat"],
-  "Nogaon": ["Sadar", "Raninagar", "Atrai", "Niamatpur", "Porsha", "Sapahar", "Manda", "Dhamorhat", "Badalgachi", "Potnitola", "Mohadebpur"],
-  "Joipurhat": ["Sadar", "Akkelpur", "Kalai", "Panch bibi", "Khetlal"],
-  "Sirajgonj": ["Sadar", "Kamar Khand", "Belkuchi", "Kazipur", "Chowhali", "Shahadpur", "Tarash", "Ullapara", "Roygonj"],
-  "Nilphamari": ["Sadar", "Dimla", "Jaldhaka", "Domar", "Keshoregonj", "Saidpur"],
-  "Thanaakurgaon": ["Sadar", "Baliadangi", "Pirgonj", "Horipur", "Ranisankail"],
-  "Gaibandha": ["Sadar", "Gobindagonj", "Phulchari", "Saghat", "Sundargonj", "Palashbari", "Sadullapur"],
-  "Lalmonirhat": ["Sadar", "Aditmari", "Hatibandha", "Kaligonj", "Patgram"],
-  "Kurigram": ["Sadar", "Rowmari", "Rajippur", "Chilmari", "Ulipur", "Rajarhat", "Phulbari", "Nageshwori", "Bhurungamari"],
-  "Dinajpur": ["Sadar", "Parbotipur", "Phulbari", "Birampur", "Hakimpur", "Nawabgonj", "Ghoraghat", "Bochagonj", "Berol", "Kaharol", "Birgonj", "Khansama", "Chirir Bandor"],
-  "Rangpur": ["Sadar", "Gongachora", "Badargonj", "Taragonj", "Kaunia", "Pirgacha", "Me Thanaapukur", "Pirgonj"],
-  "Panchagarh": ["Sadar", "Atwori", "Boda", "Debigonj", "Tetulia"]
+  "Dhaka": ["Dhanmondi", "Mirpur", "Gulshan", "Uttara", "Mohammadpur", "Motijheel", "Savar"],
+  "Chittagonj": ["Kotwali", "Panchlaish", "Halishahar", "Nasirabad"],
+  "Rajshahi": ["Boalia", "Rajpara", "Poba", "Motihar"]
 };
 
 const districtList = Object.keys(locationData).sort();
 
 export default function DashboardPage() {
-  const [userName, setUserName] = useState("Customer");
-  const [userEmail, setUserEmail] = useState("Not Available");
+  const [activeTab, setActiveTab] = useState("overview");
   const [mounted, setMounted] = useState(false);
 
-  // 🏠 Address Book State management
+  // User States (Overview & Settings Data Matrix)
+  const [userInfo, setUserInfo] = useState({
+    name: "Customer",
+    phone: "",
+    email: "", // Shurute empty thakbe
+    dob: "",
+    gender: ""
+  });
+
+  // Address Modal States
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [label, setLabel] = useState("Home");
   const [customLabel, setCustomLabel] = useState("");
   const [addrName, setAddrName] = useState("");
@@ -106,36 +95,47 @@ export default function DashboardPage() {
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
 
-  // 🔑 কারেন্ট ইউজারের জন্য ইউনিক লোকালস্টোরেজ কী (Key) জেনারেট করার ফাংশন
+  // Order List & Accordion Timeline Tracker States
+  const [orders, setOrders] = useState(initialOrders);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
   const getAddressKey = (email: string) => {
-    return email && email !== "Not Available" ? `userAddresses_${email.trim().toLowerCase()}` : "userAddresses_guest";
+    const safeEmail = email && email.trim() !== "" ? email.trim().toLowerCase() : "guest";
+    return `userAddresses_${safeEmail}`;
   };
 
   useEffect(() => {
     setMounted(true);
     const storedName = localStorage.getItem("userName");
     const storedEmail = localStorage.getItem("userEmail"); 
+    const storedPhone = localStorage.getItem("userPhone");
 
-    if (storedName) setUserName(storedName);
-    
-    // ইমেল যদি অবজেক্ট বা অন্য কিছু স্টোর হয়ে থাকে সেটিকে স্ট্রিং হ্যান্ডেল করা হচ্ছে
-    const currentEmail = storedEmail || "Not Available";
-    setUserEmail(currentEmail);
+    let currentEmail = "";
+    // User jodi nijer real email add kore shudhu tokhon e show korbe, auto backend placeholder thakle hide hobe
+    if (storedEmail && !storedEmail.includes("onecarta.com") && storedEmail !== "Not Available") {
+      currentEmail = storedEmail;
+    }
 
-    // 🔒 ডাইনামিক কী থেকে কারেন্ট ইউজারের অ্যাড্রেস প্রোফাইল রিট্রিভ করা হচ্ছে
+    setUserInfo(prev => ({
+      ...prev,
+      name: storedName || "Customer",
+      email: currentEmail,
+      phone: storedPhone || ""
+    }));
+
     const targetKey = getAddressKey(currentEmail);
     const storedAddresses = localStorage.getItem(targetKey);
     if (storedAddresses) {
       setAddresses(JSON.parse(storedAddresses));
+    } else {
+      const defaultAddr = [{ id: "addr_default", label: "Home", name: storedName || "Customer", phone: storedPhone || "01XXXXXXXXX", district: "Dhaka", thana: "Dhanmondi", homeAddress: "House 24, Road 4", isDefault: true }];
+      setAddresses(defaultAddr);
+      localStorage.setItem(targetKey, JSON.stringify(defaultAddr));
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (districtRef.current && !districtRef.current.contains(event.target as Node)) {
-        setIsDistrictOpen(false);
-      }
-      if (thanaRef.current && !thanaRef.current.contains(event.target as Node)) {
-        setIsThanaOpen(false);
-      }
+      if (districtRef.current && !districtRef.current.contains(event.target as Node)) setIsDistrictOpen(false);
+      if (thanaRef.current && !thanaRef.current.contains(event.target as Node)) setIsThanaOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -143,11 +143,27 @@ export default function DashboardPage() {
 
   if (!mounted) return null;
 
+  const toggleOrderExpand = (id: string) => {
+    setExpandedOrderId(expandedOrderId === id ? null : id);
+  };
+
+  const handleCancelOrder = (id: string) => {
+    if (confirm("Are you sure you want to cancel this order?")) {
+      setOrders(orders.map(o => o.id === id ? { ...o, status: "Cancelled" } : o));
+    }
+  };
+
+  const handleSetPrimaryAddress = (id: string) => {
+    const updated = addresses.map(addr => ({ ...addr, isDefault: addr.id === id }));
+    setAddresses(updated);
+    localStorage.setItem(getAddressKey(userInfo.email), JSON.stringify(updated));
+  };
+
   const handlePhoneChange = (val: string) => {
     setAddrPhone(val.replace(/\D/g, ""));
   };
 
-  const handleAddAddress = (e: React.FormEvent) => {
+  const handleAddAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAddressError("");
 
@@ -155,15 +171,13 @@ export default function DashboardPage() {
       setAddressError("Please fill out all mandatory fields.");
       return;
     }
-
     if (!addrPhone.startsWith("0") || addrPhone.length !== 11) {
-      setAddressError("Phone number must start with 0 and be exactly 11 digits long.");
+      setAddressError("Phone number must be exactly 11 digits.");
       return;
     }
 
     const finalLabel = label === "Others" ? (customLabel.trim() || "Others") : label;
-
-    const newAddress: SavedAddress = {
+    const newAddr: SavedAddress = {
       id: `addr_${Date.now()}`,
       label: finalLabel,
       name: addrName.trim(),
@@ -171,30 +185,29 @@ export default function DashboardPage() {
       district,
       thana,
       homeAddress: homeAddress.trim(),
+      isDefault: addresses.length === 0
     };
 
-    const updatedAddresses = [...addresses, newAddress];
-    setAddresses(updatedAddresses);
+    const updated = [...addresses, newAddr];
+    setAddresses(updated);
+    localStorage.setItem(getAddressKey(userInfo.email), JSON.stringify(updated));
+    setIsAddressModalOpen(false);
 
-    // 🔒 কারেন্ট ইউজারের নিজস্ব ইউনিক ডাইনামিক কী-তে ডাটা সেভ হচ্ছে
-    localStorage.setItem(getAddressKey(userEmail), JSON.stringify(updatedAddresses));
-
-    // Reset Inputs
-    setAddrName("");
-    setAddrPhone("");
-    setDistrict("");
-    setThana("");
-    setHomeAddress("");
-    setCustomLabel("");
-    setLabel("Home");
+    setAddrName(""); setAddrPhone(""); setDistrict(""); setThana(""); setHomeAddress(""); setLabel("Home");
   };
 
   const handleDeleteAddress = (id: string) => {
-    const updated = addresses.filter((a) => a.id !== id);
+    const updated = addresses.filter(a => a.id !== id);
+    if (addresses.find(a => a.id === id)?.isDefault && updated.length > 0) {
+      updated[0].isDefault = true;
+    }
     setAddresses(updated);
-    
-    // 🔒 ডিলিট করার পর ওই ইউজারের কী-তেই ডাটা আপডেট করা হচ্ছে
-    localStorage.setItem(getAddressKey(userEmail), JSON.stringify(updated));
+    localStorage.setItem(getAddressKey(userInfo.email), JSON.stringify(updated));
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/";
   };
 
   const filteredDistricts = districtList.filter((d) =>
@@ -206,90 +219,389 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-300">
-      
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 flex items-center gap-2 capitalize">
-          Welcome back, {userName}! 👋
-        </h1>
-        <p className="text-xs md:text-sm text-gray-400 mt-1">
-          Manage your account, track orders, and update details
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50/60 py-12 md:py-16">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-          <div className="bg-purple-50 p-3 rounded-xl text-xl">📦</div>
+        {/* Welcome Header */}
+        <div className="mb-10 bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase">Total Orders</p>
-            <p className="text-xl font-black text-gray-800">0</p>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-800 flex items-center gap-2 capitalize tracking-tight">
+              Welcome back, {userInfo.name}! 👋
+            </h1>
+            <p className="text-sm text-gray-500 mt-1 font-medium">
+              Manage your profile parameters, track shipment logs, and control defaults.
+            </p>
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="bg-blue-50/80 border border-blue-100 rounded-xl px-5 py-3 text-center flex-1 md:flex-none">
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Total Orders</p>
+              <p className="text-xl font-black text-[#1f4294] mt-0.5">{orders.filter(o => o.status !== "Cancelled").length}</p>
+            </div>
+            <div className="bg-red-50/60 border border-red-100 rounded-xl px-5 py-3 text-center flex-1 md:flex-none">
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Wishlist</p>
+              <p className="text-xl font-black text-red-500 mt-0.5">0</p>
+            </div>
           </div>
         </div>
-        
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-          <div className="bg-pink-50 p-3 rounded-xl text-xl">❤️</div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase">Wishlist Items</p>
-            <p className="text-xl font-black text-gray-800">0</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Bottom Dashboard Split Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        
-        {/* Left Hand: Profile Data + Address Book Editor Container */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           
-          {/* Account Details */}
-          <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-            <h2 className="text-base font-bold text-gray-800 mb-6 pb-2 border-b border-gray-50">
-              Account Details
-            </h2>
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-gray-400">Name</span>
-                <span className="font-bold text-gray-700 capitalize">{userName}</span>
+          {/* 🔘 LEFT SIDEBAR SUITE */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-1.5 lg:sticky lg:top-24">
+            
+            <div className="flex flex-col items-center text-center p-5 border-b border-gray-100 mb-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#1a1a2e] to-[#2c2769] text-white flex items-center justify-center text-2xl font-black shadow-md uppercase mb-3">
+                {userInfo.name[0]}
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-gray-400">Email</span>
-                <span className="font-medium text-gray-700">{userEmail}</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-gray-400">Role</span>
-                <span className="bg-gray-50 border border-gray-100 text-xs font-bold text-gray-600 px-3 py-1 rounded-full">
-                  User
-                </span>
-              </div>
+              <h4 className="text-base font-black text-gray-800 capitalize truncate w-full tracking-tight">{userInfo.name}</h4>
+              
+              {/* Conditional Email Hide Logic */}
+              {userInfo.email && (
+                <p className="text-xs text-gray-400 mt-1 truncate w-full font-medium flex items-center justify-center gap-1">
+                  <Mail size={12} /> {userInfo.email}
+                </p>
+              )}
+            </div>
+
+            <p className="px-3 py-1 text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">Navigation Menu</p>
+            
+            {[
+              { id: "overview", label: "Overview Status", icon: <User size={16} /> },
+              { id: "orders", label: "My Order History", icon: <Package size={16} /> },
+              { id: "wishlist", label: "My Wishlist", icon: <Heart size={16} /> },
+              { id: "addresses", label: "Manage Addresses", icon: <MapPin size={16} /> },
+              { id: "settings", label: "Profile Information", icon: <Settings size={16} /> },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center justify-between px-4 py-3.5 text-sm font-bold rounded-xl transition-all cursor-pointer relative group ${
+                    isActive ? "bg-[#eeedf5] text-[#1f4294] font-black shadow-sm" : "text-gray-600 hover:bg-gray-50/80"
+                  }`}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-[#1f4294] rounded-r-full" />
+                  )}
+                  
+                  <div className={`flex items-center gap-3.5 ${isActive ? 'pl-2' : ''} transition-all`}>
+                    <span className={isActive ? "text-[#1f4294]" : "text-gray-400"}>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </div>
+                  <ChevronRight size={14} className={isActive ? "text-[#1f4294]" : "text-gray-300 group-hover:translate-x-0.5 transition-transform"} />
+                </button>
+              );
+            })}
+
+            <div className="pt-3 border-t border-gray-100 mt-3">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3.5 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50/60 rounded-xl text-left cursor-pointer transition-colors">
+                <LogOut size={16} /> <span>Log Out Account</span>
+              </button>
             </div>
           </div>
 
-          {/* 🎟️ Add Address Book Form Subcard */}
-          <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
-            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
-              <PlusCircle size={17} className="text-[#2c2769]" />
-              <span>Add New Address</span>
-            </h2>
+          {/* 📊 RIGHT PANEL CONTENT CONTAINER */}
+          <div className="lg:col-span-3 bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm min-h-[560px]">
+            
+            {/* ================= OVERVIEW PANEL ================= */}
+            {activeTab === "overview" && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-gray-100 pb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-800 tracking-tight">Account Overview</h2>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">Verify your registered account profile details matrices.</p>
+                  </div>
+                  <span className="bg-blue-50 border border-blue-100 text-[#1f4294] text-[11px] font-black uppercase px-3 py-1 rounded-full tracking-wider">Premium Member</span>
+                </div>
 
-            {addressError && (
-              <div className="bg-red-50 text-red-600 text-[11px] font-bold p-2.5 border border-red-100 rounded-xl text-center">
-                {addressError}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl">
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Full Legal Name</p>
+                    <p className="text-sm font-bold text-gray-800 capitalize mt-1.5">{userInfo.name}</p>
+                  </div>
+                  <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl">
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Active Phone Line</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1.5">{userInfo.phone || "Not Configured Yet"}</p>
+                  </div>
+                  <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl sm:col-span-2">
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Email Communication Address</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1.5 break-all">
+                      {userInfo.email || "No email address linked yet. Update from configurations."}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl">
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Date of Birth</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1.5">{userInfo.dob || "Unspecified"}</p>
+                  </div>
+                  <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl">
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Gender Orientation</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1.5">{userInfo.gender || "Unspecified"}</p>
+                  </div>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleAddAddress} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Address Tag</label>
-                <div className="grid grid-cols-3 gap-2">
+            {/* ================= MY ORDERS PANEL ================= */}
+            {activeTab === "orders" && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-800 tracking-tight">Order Logs & Statements ({orders.length})</h2>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">Expand tracking milestone logs parameters real-time.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {orders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    return (
+                      <div key={order.id} className="border border-gray-100 rounded-xl overflow-hidden shadow-sm bg-white">
+                        
+                        <div 
+                          onClick={() => toggleOrderExpand(order.id)}
+                          className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/30 hover:bg-gray-50/60 transition-colors cursor-pointer select-none"
+                        >
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-sm font-black text-gray-800">Invoice ID: #{order.id}</span>
+                              <span className="text-xs text-gray-400 font-semibold">{order.date}</span>
+                            </div>
+                            <div className="text-xs font-bold text-[#1f4294] flex items-center gap-1.5 truncate">
+                              <span>{order.items}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between md:justify-end gap-6 flex-shrink-0">
+                            <div className="text-left md:text-right">
+                              <p className="text-sm font-black text-gray-800">{order.total}</p>
+                              <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                {order.isPaid ? "PAID" : "UNPAID"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className={`text-[11px] font-black uppercase px-3 py-1 rounded-full tracking-wider ${
+                                order.status === "Delivered" ? "bg-green-50 text-green-600" :
+                                order.status === "Cancelled" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                              }`}>
+                                {order.status}
+                              </span>
+
+                              {order.status !== "Delivered" && order.status !== "Cancelled" && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id); }}
+                                  className="text-xs font-bold bg-white text-red-500 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Arogga Timeline Look Tracker */}
+                        {isExpanded && (
+                          <div className="p-6 bg-white border-t border-gray-100 animate-in slide-in-from-top-3 duration-300">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-5">Realtime Processing Status Milestones</p>
+                            
+                            <div className="space-y-0.5 pl-1.5">
+                              {order.timeline.map((step, idx) => {
+                                const isLast = idx === order.timeline.length - 1;
+                                return (
+                                  <div key={idx} className="flex gap-4">
+                                    <div className="flex flex-col items-center flex-shrink-0 relative">
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center z-10 ${
+                                        step.done ? "bg-[#1f4294] text-white shadow-sm" : "bg-gray-100 text-gray-300"
+                                      }`}>
+                                        <CheckCircle2 size={13} />
+                                      </div>
+                                      {!isLast && (
+                                        <div className={`w-0.5 h-14 -my-0.5 ${
+                                          step.done && order.timeline[idx + 1]?.done ? "bg-[#1f4294]" : "bg-gray-200"
+                                        }`} />
+                                      )}
+                                    </div>
+                                    <div className="pb-6 pt-0.5 flex-1">
+                                      <div className="flex items-center justify-between gap-3">
+                                        <h5 className={`text-sm font-bold ${step.done ? "text-gray-800" : "text-gray-400"}`}>{step.title}</h5>
+                                        <span className="text-xs text-gray-400 font-medium">{step.time}</span>
+                                      </div>
+                                      <p className="text-xs text-gray-400 mt-1 leading-relaxed">{step.desc}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ================= WISHLIST PANEL ================= */}
+            {activeTab === "wishlist" && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="border-b border-gray-100 pb-4">
+                  <h2 className="text-lg font-black text-gray-800 tracking-tight">Saved Wishlist Index</h2>
+                  <p className="text-xs text-gray-400 mt-0.5 font-medium">Your absolute bookmarked targets logs collection.</p>
+                </div>
+                <div className="text-center py-16 text-gray-400 text-sm font-medium italic border border-dashed border-gray-200 rounded-xl bg-gray-50/40">
+                  Your wish matrix registry is empty.
+                </div>
+              </div>
+            )}
+
+            {/* ================= ADDRESS BOOK PANEL ================= */}
+            {activeTab === "addresses" && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-800 tracking-tight">Saved Address Index</h2>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">Configure primary delivery coordinates configurations.</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsAddressModalOpen(true)}
+                    className="flex items-center gap-2 bg-[#1f4294] text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-[#16337a] transition-all shadow-md uppercase tracking-wider cursor-pointer"
+                  >
+                    <PlusCircle size={15} /> <span>Add New Address</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {addresses.map((addr) => (
+                    <div key={addr.id} className={`border p-6 rounded-2xl relative transition-all ${
+                      addr.isDefault ? "border-[#1f4294] bg-[#1f4294]/5 shadow-sm" : "border-gray-100 bg-white"
+                    }`}>
+                      <div className="flex justify-between items-start">
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider ${
+                          addr.isDefault ? "bg-[#1f4294] text-white" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {addr.label} {addr.isDefault && "(Default Gateway)"}
+                        </span>
+                        
+                        <div className="flex items-center gap-3">
+                          {!addr.isDefault && (
+                            <button 
+                              onClick={() => handleSetPrimaryAddress(addr.id)}
+                              className="text-xs font-bold text-[#1f4294] hover:underline cursor-pointer bg-transparent"
+                            >
+                              Set Default
+                            </button>
+                          )}
+                          <button onClick={() => handleDeleteAddress(addr.id)} className="text-gray-300 hover:text-red-500 p-1.5 rounded-md transition-colors cursor-pointer">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 text-xs space-y-1.5">
+                        <p className="font-bold text-gray-800 text-sm capitalize">{addr.name}</p>
+                        <p className="font-semibold text-gray-500">{addr.phone}</p>
+                        <p className="text-gray-400 font-medium leading-relaxed mt-2">
+                          {addr.homeAddress}, <span className="text-gray-600 font-bold">{addr.thana}, {addr.district}</span>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ================= ACCOUNT SETTINGS PANEL ================= */}
+            {activeTab === "settings" && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="border-b border-gray-100 pb-4">
+                  <h2 className="text-lg font-black text-gray-800 tracking-tight">Profile Configurations</h2>
+                  <p className="text-xs text-gray-400 mt-0.5 font-medium">Update account fields manually to synchronize database state values.</p>
+                </div>
+
+                <form className="space-y-5 max-w-xl" onSubmit={(e) => { e.preventDefault(); alert("Profile cached successfully!"); setActiveTab("overview"); }}>
+                  <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                    <input 
+                      type="text" id="editName" placeholder=" " value={userInfo.name} 
+                      onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
+                      className="peer w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10 font-bold"
+                    />
+                    <label htmlFor="editName" className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Customer Structural Name</label>
+                  </div>
+
+                  <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                    <input 
+                      type="tel" id="editPhone" placeholder=" " value={userInfo.phone} 
+                      onChange={(e) => setUserInfo({ ...userInfo, phone: e.target.value })}
+                      className="peer w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10 font-bold"
+                    />
+                    <label htmlFor="editPhone" className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Phone Identity Number</label>
+                  </div>
+
+                  <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                    <input 
+                      type="email" id="editEmail" placeholder=" " value={userInfo.email} 
+                      onChange={(e) => setUserInfo({ ...userInfo, email: e.target.value })}
+                      className="peer w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10 font-bold"
+                    />
+                    <label htmlFor="editEmail" className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Customer Email Address (Showcased when input)</label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                      <input type="date" value={userInfo.dob} onChange={(e) => setUserInfo({ ...userInfo, dob: e.target.value })} className="w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10 font-bold" />
+                    </div>
+                    <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                      <select value={userInfo.gender} onChange={(e) => setUserInfo({ ...userInfo, gender: e.target.value })} className="w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10 font-bold bg-white">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="bg-[#1f4294] hover:bg-[#16337a] text-white font-bold text-xs px-6 py-3.5 rounded-xl transition-colors cursor-pointer shadow-sm">
+                    Save Structural Meta Variations
+                  </button>
+                </form>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+      </div>
+
+      {/* 📥 POPUP ADDRESS BOX EXTENSION MODAL */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsAddressModalOpen(false)} />
+          
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-250">
+            <button onClick={() => setIsAddressModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-all cursor-pointer">
+              <X size={16} />
+            </button>
+            
+            <h3 className="text-base font-black text-gray-800 uppercase tracking-wide border-b border-gray-100 pb-3.5 mb-5 flex items-center gap-2">
+              <MapPin size={16} className="text-[#1f4294]" />
+              <span>Add Terminal Delivery Destination</span>
+            </h3>
+
+            {addressError && (
+              <div className="bg-red-50 text-red-600 text-xs font-bold p-3 mb-4 border border-red-100 rounded-xl text-center">{addressError}</div>
+            )}
+
+            <form onSubmit={handleAddAddressSubmit} className="space-y-4">
+              <div>
+                <label className="text-[11px] font-black text-gray-400 uppercase block mb-1.5">Destination Tag Mode</label>
+                <div className="grid grid-cols-3 gap-3">
                   {["Home", "Office", "Others"].map((item) => (
                     <button
-                      key={item}
-                      type="button"
-                      onClick={() => setLabel(item)}
-                      className={`p-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                        label === item ? "border-[#2c2769] bg-[#eeedf5]/40 text-[#2c2769]" : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                      key={item} type="button" onClick={() => setLabel(item)}
+                      className={`p-2.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
+                        label === item ? "border-[#1f4294] bg-[#eeedf5] text-[#1f4294]" : "border-gray-200 text-gray-500 hover:bg-gray-50"
                       }`}
                     >
                       {item}
@@ -299,193 +611,67 @@ export default function DashboardPage() {
               </div>
 
               {label === "Others" && (
-                <input 
-                  type="text"
-                  placeholder="E.g., Gym, Friend's house"
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#2c2769] text-gray-800 font-medium"
-                  value={customLabel}
-                  onChange={(e) => setCustomLabel(e.target.value)}
-                />
+                <input type="text" placeholder="Specify custom reference node..." value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl text-xs text-gray-800 font-medium" />
               )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Full Name</label>
-                <input 
-                  type="text"
-                  placeholder="Receiver name"
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#2c2769] text-gray-800 font-medium"
-                  value={addrName}
-                  onChange={(e) => setAddrName(e.target.value)}
-                />
+              <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                <input type="text" required value={addrName} onChange={(e) => setAddrName(e.target.value)} placeholder=" " className="peer w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10" />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Receiver's Full Name</label>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Phone Number</label>
-                <input 
-                  type="tel"
-                  maxLength={11}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#2c2769] text-gray-800 font-medium"
-                  value={addrPhone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                />
+              <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                <input type="tel" required maxLength={11} value={addrPhone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder=" " className="peer w-full text-xs text-gray-800 px-4 py-3.5 bg-transparent focus:outline-none relative z-10" />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Phone Identity String</label>
               </div>
 
-              <div className="space-y-1 relative" ref={districtRef}>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">District</label>
-                <div 
-                  onClick={() => setIsDistrictOpen(!isDistrictOpen)}
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs bg-white flex justify-between items-center cursor-pointer select-none text-gray-700 font-medium"
-                >
-                  <span>{district || "Select District"}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative" ref={districtRef}>
+                  <div onClick={() => setIsDistrictOpen(!isDistrictOpen)} className="p-3 border border-gray-200 rounded-xl text-xs bg-white flex justify-between items-center cursor-pointer text-gray-700 font-bold select-none">
+                    <span>{district || "Select District"}</span> <ChevronDown size={14} className="text-gray-400" />
+                  </div>
+                  {isDistrictOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 shadow-xl rounded-xl z-50 max-h-40 flex flex-col overflow-hidden">
+                      <div className="p-2 border-b border-gray-50 flex items-center gap-1.5 bg-gray-50">
+                        <Search size={12} className="text-gray-400" />
+                        <input type="text" placeholder="Filter..." className="w-full bg-transparent text-xs focus:outline-none text-gray-700" value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                      </div>
+                      <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+                        {filteredDistricts.map(d => <div key={d} onClick={() => { setDistrict(d); setThana(""); setIsDistrictOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{d}</div>)}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {isDistrictOpen && (
-                  <div className="absolute left-0 right-0 bottom-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-44 flex flex-col overflow-hidden">
-                    <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
-                      <Search size={12} className="text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Search district..." 
-                        className="w-full bg-transparent text-xs focus:outline-none text-gray-700"
-                        value={districtSearch}
-                        onChange={(e) => setDistrictSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                      {filteredDistricts.map((d) => (
-                        <div 
-                          key={d}
-                          onClick={() => { setDistrict(d); setThana(""); setIsDistrictOpen(false); }}
-                          className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          {d}
-                        </div>
-                      ))}
-                    </div>
+                <div className="relative" ref={thanaRef}>
+                  <div onClick={() => district && setIsThanaOpen(!isThanaOpen)} className={`p-3 border border-gray-200 rounded-xl text-xs flex justify-between items-center cursor-pointer select-none ${!district ? 'bg-gray-50 text-gray-300' : 'text-gray-700 font-bold'}`}>
+                    <span>{thana || "Select Thana"}</span> <ChevronDown size={14} className="text-gray-400" />
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-1 relative" ref={thanaRef}>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Thana / Upazila</label>
-                <div 
-                  onClick={() => district && setIsThanaOpen(!isThanaOpen)}
-                  className={`w-full p-2.5 border border-gray-200 rounded-xl text-xs flex justify-between items-center cursor-pointer select-none ${
-                    !district ? 'bg-gray-50 text-gray-300' : 'text-gray-700 font-medium'
-                  }`}
-                >
-                  <span>{thana || "Select Thana"}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
+                  {isThanaOpen && district && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 shadow-xl rounded-xl z-50 max-h-40 flex flex-col overflow-hidden">
+                      <div className="p-2 border-b border-gray-50 flex items-center gap-1.5 bg-gray-50">
+                        <Search size={12} className="text-gray-400" />
+                        <input type="text" placeholder="Filter..." className="w-full bg-transparent text-xs focus:outline-none text-gray-700" value={thanaSearch} onChange={(e) => setThanaSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                      </div>
+                      <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+                        {filteredThanas.map(t => <div key={t} onClick={() => { setThana(t); setIsThanaOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{t}</div>)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {isThanaOpen && district && (
-                  <div className="absolute left-0 right-0 bottom-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-44 flex flex-col overflow-hidden">
-                    <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
-                      <Search size={12} className="text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Search Thana..." 
-                        className="w-full bg-transparent text-xs focus:outline-none text-gray-700"
-                        value={thanaSearch}
-                        onChange={(e) => setThanaSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                      {filteredThanas.map((t) => (
-                        <div 
-                          key={t}
-                          onClick={() => { setThana(t); setIsThanaOpen(false); }}
-                          className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          {t}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Detailed Address</label>
-                <textarea 
-                  rows={2}
-                  placeholder="House/Road numbers, block, area..."
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#2c2769] text-gray-800 font-medium resize-none"
-                  value={homeAddress}
-                  onChange={(e) => setHomeAddress(e.target.value)}
-                />
+              <div className="relative group bg-white border border-gray-200 focus-within:border-[#1f4294] rounded-xl transition-all">
+                <textarea required rows={2} value={homeAddress} onChange={(e) => setHomeAddress(e.target.value)} placeholder=" " className="peer w-full text-xs text-gray-800 px-4 py-3 bg-transparent focus:outline-none relative z-10 resize-none" />
+                <label className="absolute left-3 top-4 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-[#1f4294] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[11px]">Holding, Street/Road Coordinates</label>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-2.5 font-bold text-xs rounded-xl transition-colors cursor-pointer mt-2"
-              >
-                Save to Address Book
+              <button type="submit" className="w-full bg-[#1f4294] hover:bg-[#16337a] text-white py-3 rounded-xl font-bold text-xs transition-all shadow-md cursor-pointer">
+                Save Shipping Address Coordinate
               </button>
             </form>
           </div>
-
         </div>
-
-        {/* Right Hand Side: Active Address Grid Profiles Viewer */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-1">
-            <MapPin size={18} className="text-[#2c2769]" />
-            <span>Saved Address Book ({addresses.length})</span>
-          </h2>
-
-          {addresses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {addresses.map((addr) => (
-                <div key={addr.id} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm flex flex-col justify-between relative hover:border-gray-200 transition-all">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="bg-[#2c2769] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-lg uppercase tracking-wider flex items-center gap-1">
-                        {addr.label.toLowerCase() === "home" && <Home size={9} />}
-                        {addr.label.toLowerCase() === "office" && <Briefcase size={9} />}
-                        {addr.label}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteAddress(addr.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded-lg cursor-pointer"
-                        title="Delete Address"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-
-                    <div className="text-xs space-y-1.5 pt-0.5">
-                      <p className="font-bold text-gray-800 flex items-center gap-2">
-                        <User size={13} className="text-gray-400" />
-                        {addr.name}
-                      </p>
-                      <p className="font-semibold text-gray-500 flex items-center gap-2">
-                        <Phone size={13} className="text-gray-400" />
-                        {addr.phone}
-                      </p>
-                      <p className="text-gray-400 font-medium leading-relaxed pl-5">
-                        {addr.homeAddress}, <br />
-                        <span className="text-gray-600 font-bold">{addr.thana}, {addr.district}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white border border-gray-100 border-dashed rounded-3xl p-12 text-center text-gray-400">
-              <MapPin size={32} className="mx-auto text-gray-200 mb-2" />
-              <p className="text-xs font-bold">Your Address Book is currently empty.</p>
-              <p className="text-[11px] text-gray-400/80 mt-0.5">Fill out the form on the left to add your first delivery location.</p>
-            </div>
-          )}
-        </div>
-
-      </div>
+      )}
 
     </div>
   );

@@ -57,11 +57,28 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   // Real-time Phone Validation Styles (Must start with 0)
   const isPhoneInvalid = !isLogin && phone.length > 0 && !phone.startsWith("0");
 
-  // Real-time Email Validation Styles (Optional, but if typed must be valid format)
+  // Real-time Email Validation Styles
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isEmailInvalid = email.trim().length > 0 && !emailRegex.test(email.trim());
+  const bdFullPhoneRegex = /^01[1-9]\d{8}$/;
 
-  // Real-time Password Strength Meter Calculation Logic
+  const isLoginInputInvalid = () => {
+    if (!isLogin || email.trim().length === 0) return false;
+    const input = email.trim();
+    const isNumeric = /^[+]?[\d]*$/.test(input.replace(/[\s-]/g, ""));
+    
+    if (isNumeric) {
+      if (input.length > 2 && !input.startsWith("0")) return true;
+      if (input.length === 11 && !bdFullPhoneRegex.test(input)) return true;
+      if (input.length > 11) return true;
+      return false;
+    } else {
+      if (input.includes("@") && !emailRegex.test(input)) return true;
+      return false;
+    }
+  };
+
+  const isEmailInvalid = !isLogin && email.trim().length > 0 && !emailRegex.test(email.trim());
+
   const getPasswordStrength = () => {
     if (!password) return { label: "", color: "bg-gray-200", textColor: "text-gray-400", width: "w-0" };
     
@@ -83,7 +100,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const strength = getPasswordStrength();
 
-  // Dynamic Icon Detection for Login Input
   const getLoginIcon = () => {
     const trimmedInput = email.trim();
     if (!trimmedInput) return <Mail size={15} />;
@@ -91,7 +107,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     return isPhoneNumber ? <Phone size={15} /> : <Mail size={15} />;
   };
 
-  // Safe Handler for 11-digit phone restriction
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value.replace(/\D/g, ""); 
     if (inputValue.length <= 11) {
@@ -112,7 +127,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setError("Please enter a valid email address format!");
         return;
       }
-      // 💡 Strict Length Enforcement Rule for Sign Up Password
       if (password.length < 6) {
         setError("Password must be at least 6 characters long!");
         return;
@@ -120,7 +134,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
 
     setLoading(true);
-    const bdFullPhoneRegex = /^01[1-9]\d{8}$/;
 
     if (isLogin) {
       // 🔐 Login Flow
@@ -128,6 +141,21 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         let loginPayload = email.trim().toLowerCase();
         const cleanedPayload = loginPayload.replace(/[\s-]/g, "");
         const isNumeric = /^[+]?[\d]*$/.test(cleanedPayload);
+
+        // 👑 [HARDCODED MASTER ADMIN GATEWAY] — তৌসিফ ভাইয়ের স্পেশাল অ্যাডমিন সিকিউরিটি চেক
+        if (loginPayload === "admin@onecarta.shop" && password === "AdminOnecarta513@") {
+          localStorage.setItem("isLoggedIn", "true"); 
+          localStorage.setItem("userName", "Tousif (Admin)"); 
+          localStorage.setItem("userEmail", "admin@onecarta.shop"); 
+          localStorage.setItem("userRole", "Admin"); // অ্যাডমিন প্যানেল এবং নেভবার আনলকিং রিং
+
+          setLoading(false);
+          onClose();
+          
+          // সরাসরি অ্যাডমিন কন্ট্রোল প্যানেলে পুশ করে নিয়ে যাবে
+          setTimeout(() => { window.location.href = "/admin/dashboard"; }, 100);
+          return;
+        }
 
         if (isNumeric) {
           if (cleanedPayload.startsWith("1") && cleanedPayload.length === 10) {
@@ -137,6 +165,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           }
           if (bdFullPhoneRegex.test(cleanedPayload)) {
             loginPayload = `${cleanedPayload}@onecarta.com`;
+          } else if (cleanedPayload.length !== 11) {
+            setError("Please enter a valid 11-digit mobile number!");
+            setLoading(false);
+            return;
+          }
+        } else {
+          if (!emailRegex.test(loginPayload)) {
+            setError("Please enter a valid email address format!");
+            setLoading(false);
+            return;
           }
         }
 
@@ -161,6 +199,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         localStorage.setItem("isLoggedIn", "true"); 
         localStorage.setItem("userName", userData.user?.name || userData.name || "Customer"); 
         localStorage.setItem("userEmail", userData.user?.email || userData.email || loginPayload || "Not Provided"); 
+        localStorage.setItem("userRole", "User"); // সাধারণ কাস্টমার ট্যাগ
 
         setLoading(false);
         onClose();
@@ -276,9 +315,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               
               {!isLogin && (
                 <>
-                  {/* First Name & Last Name Fields (Side by Side) */}
+                  {/* First Name & Last Name Fields */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* First Name */}
                     <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
                         <User size={15} />
@@ -302,7 +340,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                       </label>
                     </div>
 
-                    {/* Last Name (Optional) */}
                     <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
                         <User size={15} />
@@ -353,9 +390,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </>
               )}
 
-              {/* Email Address Field */}
-              <div className={`relative group bg-white border ${isEmailInvalid ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
-                <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isEmailInvalid ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
+              {/* Email Address or Phone Number Field */}
+              <div className={`relative group bg-white border ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
+                <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
                   {isLogin ? getLoginIcon() : <Mail size={15} />}
                 </span>
                 <input
@@ -370,7 +407,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 <label 
                   htmlFor="email"
                   className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20
-                  ${isEmailInvalid ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
+                  ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
                   peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px]
                   peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]`}
                 >
@@ -378,7 +415,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </label>
               </div>
 
-              {/* Password Field Layout Container */}
+              {/* Password Field */}
               <div>
                 <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
@@ -403,7 +440,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </label>
                 </div>
 
-                {/* Password Strength Indicator Bar */}
+                {/* Password Strength Indicator */}
                 {!isLogin && password && (
                   <div className="mt-2 px-1 animate-in fade-in duration-200">
                     <div className="flex justify-between items-center mb-1">
