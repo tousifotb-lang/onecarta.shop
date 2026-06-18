@@ -9,7 +9,6 @@ export default function ContactUs() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // 🛠️ পরবর্তীতে এখানে আপনার API বা মেসেজ সাবমিশন লজিক কানেক্ট করতে পারবেন ভাই
     console.log("Form submitted:", formData);
     alert("আপনার মেসেজটি সফলভাবে পাঠানো হয়েছে! আমাদের টিম দ্রুত আপনার সাথে যোগাযোগ করবে।");
     setFormData({ name: "", email: "", phone: "", message: "" });
@@ -62,10 +61,9 @@ export default function ContactUs() {
         </div>
 
         {/* Contact Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-8 bg-gray-50/60 border border-gray-100 p-6 sm:p-10 rounded-3xl shadow-xs">
+        <div className="bg-gray-50/60 border border-gray-100 p-6 sm:p-10 rounded-3xl shadow-xs">
           
-          {/* Contact Form Section */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="space-y-2">
               <h2 className="text-xl font-black text-[#1a1a2e] uppercase tracking-wide flex items-center gap-2">
                 <MessageSquare size={22} /> আমাদের মেসেজ পাঠান (Send Message)
@@ -75,53 +73,86 @@ export default function ContactUs() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">আপনার নাম *</label>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* Name & Phone Group */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                {/* Name Input */}
+                <div className="relative">
                   <input
                     type="text"
+                    id="name"
                     required
+                    placeholder=" "
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-white border border-gray-200 text-gray-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-hidden focus:border-[#1a1a2e] transition-colors"
-                    placeholder="John Doe"
+                    className="block px-4 py-4 w-full text-sm font-medium text-gray-800 bg-white rounded-xl border border-gray-200 appearance-none focus:outline-hidden focus:ring-0 focus:border-[#1a1a2e] peer transition-colors"
                   />
+                  <label
+                    htmlFor="name"
+                    className="absolute text-sm font-bold text-gray-400 bg-white px-2 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] left-3 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-[#1a1a2e] transition-all uppercase tracking-wider cursor-text"
+                  >
+                    আপনার নাম *
+                  </label>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">ফোন নম্বর *</label>
+
+                {/* Phone Input */}
+                <div className="relative">
                   <input
                     type="tel"
+                    id="phone"
                     required
+                    placeholder=" "
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-white border border-gray-200 text-gray-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-hidden focus:border-[#1a1a2e] transition-colors"
-                    placeholder="017XXXXXXXX"
+                    className="block px-4 py-4 w-full text-sm font-medium text-gray-800 bg-white rounded-xl border border-gray-200 appearance-none focus:outline-hidden focus:ring-0 focus:border-[#1a1a2e] peer transition-colors"
                   />
+                  <label
+                    htmlFor="phone"
+                    className="absolute text-sm font-bold text-gray-400 bg-white px-2 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] left-3 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-[#1a1a2e] transition-all uppercase tracking-wider cursor-text"
+                  >
+                    ফোন নম্বর *
+                  </label>
                 </div>
+
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">ইমেইল অ্যাড্রেস</label>
+              {/* Email Input */}
+              <div className="relative">
                 <input
                   type="email"
+                  id="email"
+                  placeholder=" "
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-white border border-gray-200 text-gray-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-hidden focus:border-[#1a1a2e] transition-colors"
-                  placeholder="example@mail.com"
+                  className="block px-4 py-4 w-full text-sm font-medium text-gray-800 bg-white rounded-xl border border-gray-200 appearance-none focus:outline-hidden focus:ring-0 focus:border-[#1a1a2e] peer transition-colors"
                 />
+                <label
+                  htmlFor="email"
+                  className="absolute text-sm font-bold text-gray-400 bg-white px-2 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] left-3 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-[#1a1a2e] transition-all uppercase tracking-wider cursor-text"
+                >
+                  ইমেইল অ্যাড্রেস
+                </label>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">আপনার মেসেজ *</label>
+              {/* Message Input */}
+              <div className="relative">
                 <textarea
+                  id="message"
                   required
                   rows={4}
+                  placeholder=" "
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full bg-white border border-gray-200 text-gray-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-hidden focus:border-[#1a1a2e] transition-colors resize-none"
-                  placeholder="এখানে আপনার মেসেজটি বিস্তারিত লিখুন..."
+                  className="block px-4 py-4 w-full text-sm font-medium text-gray-800 bg-white rounded-xl border border-gray-200 appearance-none focus:outline-hidden focus:ring-0 focus:border-[#1a1a2e] peer transition-colors resize-none"
                 />
+                <label
+                  htmlFor="message"
+                  className="absolute text-sm font-bold text-gray-400 bg-white px-2 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] left-3 peer-placeholder-shown:scale-100 peer-placeholder-shown:top-6 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-[#1a1a2e] transition-all uppercase tracking-wider cursor-text"
+                >
+                  আপনার মেসেজ *
+                </label>
               </div>
 
               <button
