@@ -34,7 +34,7 @@ export default function CareersPage() {
               নমস্কার/সালাম! ওয়ানকার্টায় আপনার আগ্রহের জন্য ধন্যবাদ।
             </p>
             <p>
-              এই মুহূর্তে আমাদের টিমে নতুন কোনো **Vacancy (শূন্যপদ) ফাঁকা নেই** ভাই। তবে আমরা সবসময়ই প্রতিভাবান ও কঠোর পরিশ্রমী মানুষদের সাথে কানেক্টেড থাকতে পছন্দ করি।
+              এই মুহূর্তে আমাদের টিমে নতুন কোনো Vacancy ফাঁকা নেই। তবে আমরা সবসময়ই প্রতিভাবান ও কঠোর পরিশ্রমী মানুষদের সাথে কানেক্টেড থাকতে পছন্দ করি।
             </p>
             <p className="bg-amber-50 border border-amber-200/60 rounded-xl p-4 text-sm sm:text-base text-amber-900 font-semibold">
               <Sparkles size={16} className="inline mr-1.5 text-amber-600 mb-0.5" />
