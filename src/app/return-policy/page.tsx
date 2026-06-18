@@ -59,12 +59,12 @@ export default function ReturnPolicy() {
               ১. রিটার্ন পলিসি (Eligibility for Returns)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
-              আমরা ওয়ানকার্টায় কাস্টমার স্যাটিসফ্যাকশনকে সবচেয়ে বেশি প্রাধান্য দিই। ডেলিভারি পাওয়ার পর সর্বোচ্চ <strong className="text-gray-900">৭ দিনের মধ্যে</strong> আপনি প্রোডাক্ট রিটার্ন করতে পারবেন। তবে রিটার্ন করার জন্য নিচের শর্তগুলো প্রযোজ্য হবে:
+              আমরা ওয়ানকার্টায় কাস্টমার স্যাটিসফ্যাকশনকে সবচেয়ে বেশি প্রাধান্য দিই। ডেলিভারি পাওয়ার পর সর্বোচ্চ <strong className="text-gray-900">৭ দিনের মধ্যে</strong> আপনি প্রোডাক্ট রিটার্ন করতে পারবেন। তবে রিটার্ন করার জন্য নিচের শর্তগুলো প্রযোজ্য হবে:
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
-              <li>প্রোডাক্টটি সম্পূর্ণ অব্যবহৃত (Unused), ফ্রেশ এবং অক্ষত অবস্থায় থাকতে হবে।</li>
-              <li>অরিじんাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টি কার্ড এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
-              <li>ভুল প্রোডাক্ট, সাইজ বা ড্যামেজড প্রোডাক্টের ক্ষেত্রে কোনো এক্সট্রা চার্জ ছাড়াই রিটার্ন নেওয়া হবে।</li>
+              <li>প্রোডাক্টটি সম্পূর্ণ অব্যবহৃত (Unused), ফ্রেশ এবং অক্ষত অবস্থায় থাকতে হবে।</li>
+              <li>অরিজিনাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টিカード এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
+              <li>ভুল প্রোডাক্ট, সাইজ বা ড্যামেজড প্রোডাক্টের ক্ষেত্রে কোনো এক্সট্রা চার্জ ছাড়াই রিটার্ন নেওয়া হবে।</li>
             </ul>
           </section>
 
@@ -74,26 +74,26 @@ export default function ReturnPolicy() {
               ২. রিফান্ড পলিসি (Refund Process)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
-              আপনার রিটার্নকৃত প্রোডাক্টটি আমাদের অফিসে পৌঁছানোর পর কোয়ালিটি চেক করা হবে। প্রোডাক্টের সবকিছু ঠিকঠাক থাকলে সর্বোচ্চ <strong className="text-gray-900">৩ থেকে ৫ কার্যদিবসের (Working Days)</strong> মধ্যে রিফান্ড প্রসেস করা হবে।
+              আপনার রিটার্নকৃত প্রোডাক্টটি আমাদের অফিসে পৌঁছানোর পর কোয়ালিটি চেক করা হবে। প্রোডাক্টের সবকিছু ঠিকঠাক থাকলে সর্বোচ্চ <strong className="text-gray-900">৩ থেকে ৫ কার্যদিবসের (Working Days)</strong> মধ্যে রিফান্ড প্রসেস করা হবে।
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>বিকাশ/নগদ বা অনলাইন পেমেন্টের ক্ষেত্রে যে অ্যাকাউন্ট থেকে টাকা এসেছে, সেই নম্বরেই রিফান্ড প্রসেস করা হবে।</li>
-              <li>ক্যাশ অন ডেলিভারির (COD) ক্ষেত্রে কাস্টমারের দেওয়া নির্দিষ্ট বিকাশ/নগদ বা bank অ্যাকাউন্টে টাকা পাঠিয়ে দেওয়া হবে।</li>
+              <li>ক্যাশ অন ডেলিভারির (COD) ক্ষেত্রে কাস্টমারের দেওয়া নির্দিষ্ট বিকাশ/নগদ বা bank অ্যাকাউন্টে টাকা পাঠিয়ে দেওয়া হবে।</li>
             </ul>
           </section>
 
           {/* Section 3 */}
           <section className="space-y-3">
             <h2 className="text-lg sm:text-xl font-black text-[#1a1a2e] uppercase tracking-wide flex items-center gap-2">
-              ৩. যেসকল ক্ষেত্রে রিটার্ন প্রযোজ্য নয় (Non-Returnable Items)
+              ৩. যেসকল ক্ষেত্রে রিটার্ন প্রযোজ্য নয় (Non-Returnable Items)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
               নিচের পরিস্থিতি বা প্রোডাক্টগুলোর ক্ষেত্রে আমরা রিটার্ন বা এক্সচেঞ্জ গ্রহণ করতে পারি না:
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
-              <li>প্রোডাক্ট বক্স বা ভেতরের কোনো এক্সেসরিজ/পলি হারিয়ে গেলে বা কোনোভাবে নষ্ট করলে।</li>
-              <li>ক্লিয়ারেন্স সেল (Clearance Sale) বা স্পেশাল ধামাকা ডিসকাউন্টে কেনা কোনো প্রোডাক্ট।</li>
-              <li>ডেলিভারি নেওয়ার পর 7 দিন পার হয়ে যাওয়ার পর আমাদের সাথে যোগাযোগ করলে।</li>
+              <li>প্রোডাক্ট বক্স বা ভেতরের কোনো এক্সেসরিজ/পলি হারিয়ে গেলে বা কোনোভাবে নষ্ট করলে।</li>
+              <li>ক্লিয়ারেন্স সেল (Clearance Sale) বা স্পেশাল ধামাকা ডিসকাউন্টে কেনা কোনো প্রোডাক্ট।</li>
+              <li>ডেলিভারি নেওয়ার পর 7 দিন পার হয়ে যাওয়ার পর আমাদের সাথে যোগাযোগ করলে।</li>
             </ul>
           </section>
 
@@ -102,16 +102,20 @@ export default function ReturnPolicy() {
             <AlertCircle size={24} className="flex-shrink-0 mt-0.5 text-amber-600" />
             <div className="text-sm sm:text-base font-semibold leading-relaxed">
               <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">विशेष দ্রষ্টব্য:</span>
-              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
+              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
             </div>
           </div>
 
         </div>
 
-        {/* Footer Contact */}
+        {/* Footer Contact — 🛠️ মোবাইলে ১ লাইনে রাখার চূড়ান্ত ফিক্স */}
         <div className="text-center mt-12 space-y-2">
-          <p className="text-sm text-gray-500 font-medium">পলিসি নিয়ে কোনো প্রশ্ন থাকলে সরাসরি আমাদের সাপোর্ট টিমে যোগাযোগ করুন</p>
-          <p className="text-base sm:text-lg font-black text-[#1a1a2e] tracking-wide">📞 01303223513 &nbsp;|&nbsp; ✉️ support@onecarta.shop</p>
+          <p className="text-sm text-gray-500 font-medium">পলিসি নিয়ে কোনো প্রশ্ন থাকলে সরাসরি আমাদের সাপোর্ট টিমে যোগাযোগ করুন</p>
+          <div className="flex items-center justify-center gap-x-2 gap-y-1 text-xs sm:text-lg font-black text-[#1a1a2e] flex-nowrap whitespace-nowrap">
+            <span className="flex items-center gap-1">📞 01303223513</span>
+            <span className="text-gray-300 font-normal">|</span>
+            <span className="flex items-center gap-1">✉️ support@onecarta.shop</span>
+          </div>
         </div>
 
       </div>
