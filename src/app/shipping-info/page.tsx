@@ -59,10 +59,10 @@ export default function ShippingInfo() {
               ১. ডেলিভারি চার্জ (Shipping Charges)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
-              ওয়ানকার্টায় আমরা অত্যন্ত সাশ্রয়ী মূল্যে সারা বাংলাদেশে প্রোডাক্ট ডেলিভারি নিশ্চিত করি। আমাদের বর্তমান শিপিং রেট নিচে দেওয়া হলো:
+              ওয়ানকার্টায় আমরা অত্যন্ত সাশ্রয়ী মূল্যে সারা বাংলাদেশে প্রোডাক্ট ডেলিভারি নিশ্চিত করি। আমাদের বর্তমান শিপিং রেট হলো:
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
-              <li><strong>ঢাকার ভেতরে (Inside Dhaka):</strong> ৬০ টাকা</li>
+              <li><strong>ঢাকার ভেতরে (Inside Dhaka):</strong> ৮০ টাকা</li>
               <li><strong>ঢাকার বাইরে (Outside Dhaka):</strong> ১২০ টাকা</li>
               <li>ক্যাম্পেইন বা বিশেষ কোনো অফারের ক্ষেত্রে নির্দিষ্ট শর্তে আমরা ফ্রি ডেলিভারি দিয়ে থাকি।</li>
             </ul>
