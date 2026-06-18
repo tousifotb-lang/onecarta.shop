@@ -99,7 +99,7 @@ export default function Footer() {
                   className="mt-0.5 flex-shrink-0"
                   style={{ color: "#a8a6d9" }}
                 />
-                <span>Dhaka, Bangladesh</span>
+                <span>Nawdapara, Shamukhdum, Paba, Rajshahi</span>
               </li>
 
               <li className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default function Footer() {
                   className="flex-shrink-0"
                   style={{ color: "#a8a6d9" }}
                 />
-                <span>16500 (10am - 10pm)</span>
+                <span>+8809611576269 (10am - 10pm)</span>
               </li>
 
               <li className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export default function Footer() {
                   className="flex-shrink-0"
                   style={{ color: "#a8a6d9" }}
                 />
-                <span>support@onecarta.com.bd</span>
+                <span>support@onecarta.shop</span>
               </li>
             </ul>
 
