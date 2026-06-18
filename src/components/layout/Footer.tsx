@@ -149,9 +149,9 @@ export default function Footer() {
               Privacy Policy
             </Link>
 
-            {/* 🛠️ [CONNECTED]: আপনার টার্মস অ্যান্ড কন্ডিশনস পেজের সাথে কানেক্ট করা হলো ভাই */}
+            {/* 🛠️ [FIXED]: টেক্সটটাকেও পরিবর্তন করে Terms & Conditions করে দেওয়া হলো ভাই */}
             <Link href="/terms-conditions" className="hover:text-[#a8a6d9] transition-colors">
-              Terms of Service
+              Terms & Conditions
             </Link>
 
             <Link href="#" className="hover:text-[#a8a6d9]">

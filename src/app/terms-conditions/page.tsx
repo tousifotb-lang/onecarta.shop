@@ -108,7 +108,7 @@ export default function TermsConditions() {
         <div className="text-center mt-12 space-y-2">
           <p className="text-sm text-gray-500 font-medium">শর্তাবলী নিয়ে কোনো জিজ্ঞাসা থাকলে আমাদের সাথে যোগাযোগ করুন</p>
           <div className="flex items-center justify-center gap-x-2 gap-y-1 text-xs sm:text-lg font-black text-[#1a1a2e] flex-nowrap whitespace-nowrap">
-            <span className="flex items-center gap-1">📞 01303223513</span>
+            <span className="flex items-center gap-1">📞 +8809611576269</span>
             <span className="text-gray-300 font-normal">|</span>
             <span className="flex items-center gap-1">✉️ support@onecarta.shop</span>
           </div>
