@@ -87,7 +87,7 @@ export default function PaymentMethods() {
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>ভিসা কার্ড (Visa)</li>
-              <li>माস্টারকার্ড (MasterCard)</li>
+              <li>মাস্টারকার্ড (MasterCard)</li>
               <li>ডিবিবিএল নেক্সটজিপে বা অন্যান্য লোকাল ব্যাংক কার্ড।</li>
             </ul>
           </section>
