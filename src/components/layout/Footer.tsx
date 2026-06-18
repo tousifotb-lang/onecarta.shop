@@ -145,11 +145,12 @@ export default function Footer() {
           <p>© 2026 Onecarta. All rights reserved.</p>
 
           <div className="flex items-center gap-4 mt-2 md:mt-0">
-            {/* 🛠️ [CONNECTED]: প্রাইভেসি পলিসি পেজটি এখানে একদম প্রোপারলি কানেক্ট করা হলো ভাই */}
+            {/* 🛠️ প্রাইভেসি পলিসি পেজটি কানেক্টেড */}
             <Link href="/privacy-policy" className="hover:text-[#a8a6d9] transition-colors">
               Privacy Policy
             </Link>
 
+            {/* 🛠️ টার্মস অ্যান্ড কন্ডিশনস পেজটি কানেক্টেড */}
             <Link href="/terms-conditions" className="hover:text-[#a8a6d9] transition-colors">
               Terms & Conditions
             </Link>
