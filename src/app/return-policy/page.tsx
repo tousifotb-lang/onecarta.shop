@@ -16,7 +16,7 @@ export default function ReturnPolicy() {
           <h1 className="text-2xl sm:text-5xl font-black tracking-tight text-[#1a1a2e] border-b-2 border-gray-100 pb-5 uppercase">
             Return & Refund Policy 🔄
           </h1>
-          <p className="text-sm text-gray-500 mt-2 italic">Last Updated: June 2026</p>
+          <p className="text-sm text-gray-500 mt-2 italic">Last Updated: May 2026</p>
         </div>
 
         {/* Quick Highlights Icons */}
@@ -59,11 +59,11 @@ export default function ReturnPolicy() {
               ১. রিটার্ন পলিসি (Eligibility for Returns)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
-              আমরা ওয়ানকার্টায় কাস্টমার স্যাটিসফ্যাকশনকে সবচেয়ে বেশি প্রাধান্য দিই। ডেলিভারি পাওয়ার পর সর্বোচ্চ <strong className="text-gray-900">৭ দিনের মধ্যে</strong> আপনি প্রোডাক্ট রিটার্ন করতে পারবেন। তবে রিটার্ন করার জন্য নিচের শর্তগুলো প্রযোজ্য হবে:
+              আমরা Onecarta.com কাস্টমারের স্যাটিসফ্যাকশনকে সবচেয়ে বেশি প্রাধান্য দিই। ডেলিভারি পাওয়ার পর সর্বোচ্চ <strong className="text-gray-900">৭ দিনের মধ্যে</strong> আপনি প্রোডাক্ট রিটার্ন করতে পারবেন। তবে রিটার্ন করার জন্য নিচের শর্তগুলো প্রযোজ্য হবে:
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>প্রোডাক্টটি সম্পূর্ণ অব্যবহৃত (Unused), ফ্রেশ এবং অক্ষত অবস্থায় থাকতে হবে।</li>
-              <li>অরিজিনাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টিカード এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
+              <li>অরিজিনাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টি কার্ড এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
               <li>ভুল প্রোডাক্ট, সাইজ বা ড্যামেজড প্রোডাক্টের ক্ষেত্রে কোনো এক্সট্রা চার্জ ছাড়াই রিটার্ন নেওয়া হবে।</li>
             </ul>
           </section>
@@ -102,7 +102,7 @@ export default function ReturnPolicy() {
             <AlertCircle size={24} className="flex-shrink-0 mt-0.5 text-amber-600" />
             <div className="text-sm sm:text-base font-semibold leading-relaxed">
               <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">বিশেষ দ্রষ্টব্য:</span>
-              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
+              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে ডেলিভারি ম্যানের সামনেই আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
             </div>
           </div>
 
@@ -112,7 +112,7 @@ export default function ReturnPolicy() {
         <div className="text-center mt-12 space-y-2">
           <p className="text-sm text-gray-500 font-medium">পলিসি নিয়ে কোনো প্রশ্ন থাকলে সরাসরি আমাদের সাপোর্ট টিমে যোগাযোগ করুন</p>
           <div className="flex items-center justify-center gap-x-2 gap-y-1 text-xs sm:text-lg font-black text-[#1a1a2e] flex-nowrap whitespace-nowrap">
-            <span className="flex items-center gap-1">📞 01303223513</span>
+            <span className="flex items-center gap-1">📞 +8809611576269</span>
             <span className="text-gray-300 font-normal">|</span>
             <span className="flex items-center gap-1">✉️ support@onecarta.shop</span>
           </div>
