@@ -121,7 +121,7 @@ export default function Footer() {
               </li>
             </ul>
 
-            {/* 🛠️ [UPDATED]: প্লেইন টেক্সট সরিয়ে এখানে প্রিমিয়াম লগো গ্রিড অ্যাড করা হলো ভাই */}
+            {/* 🛠️ [FIXED]: শেপের সাইজ ফিক্সড রেখে প্যাডিং কমিয়ে লোগো বড় করা হলো */}
             <div className="mt-5">
               <p className="text-xs text-gray-500 mb-2.5 uppercase tracking-wider font-bold">We Accept</p>
 
@@ -135,18 +135,17 @@ export default function Footer() {
                 ].map((m) => (
                   <div
                     key={m.name}
-                    className="bg-white border border-gray-700/30 p-1.5 rounded-md flex items-center justify-center w-12 h-8 shadow-xs transition-transform hover:scale-105"
+                    className="bg-white border border-gray-700/30 p-1 rounded-md flex items-center justify-center w-14 h-8 shadow-xs transition-transform hover:scale-105 overflow-hidden"
                   >
                     <img
                       src={m.src}
                       alt={m.name}
-                      className="max-w-full max-h-full object-contain"
+                      className="w-full h-full object-contain"
                       onError={(e) => {
-                        // যদি ইমেজ কোনো কারণে মিসিং থাকে, তবে টেক্সট ব্যাকআপ হিসেবে শো করবে
                         (e.target as HTMLElement).style.display = 'none';
                         const parent = (e.target as HTMLElement).parentElement;
                         if (parent) {
-                          parent.className = "bg-gray-800 border border-gray-700 text-[10px] px-1.5 py-1 rounded text-gray-300 font-bold";
+                          parent.className = "bg-gray-800 border border-gray-700 text-[10px] px-1.5 py-1 rounded text-gray-300 font-bold flex items-center justify-center w-14 h-8";
                           parent.innerText = m.name;
                         }
                       }}
