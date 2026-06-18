@@ -71,7 +71,7 @@ export default function Footer() {
               {[
                 { name: "Help Center", href: "#" },
                 { name: "Track My Order", href: "/track-order" },
-                { name: "Returns & Refunds", href: "/return-policy" }, // 🛠️ [CONNECTED]: আপনার রিটার্ন পলিসি পেজের সাথে কানেক্ট করা হলো ভাই
+                { name: "Returns & Refunds", href: "/return-policy" },
                 { name: "Payment Methods", href: "#" },
                 { name: "Shipping Info", href: "#" },
                 { name: "FAQ", href: "#" },
@@ -149,7 +149,8 @@ export default function Footer() {
               Privacy Policy
             </Link>
 
-            <Link href="#" className="hover:text-[#a8a6d9]">
+            {/* 🛠️ [CONNECTED]: আপনার টার্মস অ্যান্ড কন্ডিশনস পেজের সাথে কানেক্ট করা হলো ভাই */}
+            <Link href="/terms-conditions" className="hover:text-[#a8a6d9] transition-colors">
               Terms of Service
             </Link>
 
