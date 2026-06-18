@@ -13,7 +13,7 @@ import CartDrawer from "@/components/cart/CartDrawer";
 import SearchBar from "./SearchBar"; 
 import LoginModal from "@/components/auth/LoginModal"; 
 
-// (Main -> Sub -> Child)
+// (Main -> Sub -> Child) - আপনার সম্পূর্ণ ক্যাটাগরি ডেটা অক্ষত আছে ভাই
 const categoriesData = [
   {
     name: "Electronics",
@@ -162,7 +162,7 @@ export default function Navbar() {
   const totalItems = currentCartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const [mounted, setMounted] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false); // বটমবারের Categories টগল করার জন্য ভাই
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState(categoriesData[0]); 
@@ -223,7 +223,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50">
+    <header className="w-full sticky top-0 z-50 overflow-x-hidden md:overflow-visible">
 
       {/* Top Bar — desktop only */}
       <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
@@ -243,31 +243,35 @@ export default function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <div className="bg-[#1a1a2e] shadow-lg px-3 md:px-0">
-        <div className="container-main py-2.5">
+      <div className="bg-[#1a1a2e] shadow-lg w-full">
+        <div className="max-w-7xl mx-auto px-3 py-2.5">
 
-          {/* 🛠️ মোবাইল এবং ডেস্কটপ ওয়ান-লাইন হেডার: লোগো (বামে) ➔ সার্চবার (মাঝে) ➔ উইশলিস্ট (ডানে) */}
-          <div className="flex items-center justify-between gap-3 w-full">
-
-            {/* Left: Logo */}
+          {/* 🛠️ ফিক্সড ওয়ান-লাইন মোবাইল লেআউট: লোগো বামে, সার্চবার মাঝে, উইশলিস্ট ডানে */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 w-full">
+            
+            {/* Left: Branding Logo (বামে লোগো ফিক্সড ভাই) */}
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <img src="/logo/logo.png" alt="onecarta logo" className="h-7 md:h-10 w-auto object-contain transition-transform hover:scale-105" />
+              <img 
+                src="/logo/logo.png" 
+                alt="onecarta logo" 
+                className="h-6 sm:h-7 md:h-10 w-auto max-w-[90px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
+              />
             </Link>
 
             {/* Center: Search Bar (মোবাইল ও ডেস্কটপ দুই জায়গাতেই এক লাইনে মাঝখানে থাকবে) */}
-            <div className="flex-1 max-w-xl mx-0 md:mx-4">
+            <div className="flex-1 min-w-0">
               <SearchBar />
             </div>
 
-            {/* Right: Actions & Wishlist */}
+            {/* Right: Actions / Wishlist (ডান পাশে উইশলিস্ট) */}
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
                 <Gift size={13} /> OFFER
               </Link>
 
-              {/* Wishlist Icon — মোবাইলেও ডান কোনায় এক লাইনে থাকবে ভাই */}
-              <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9]">
-                <Heart size={22} />
+              {/* Wishlist Button: মোবাইলেও এক লাইনে ডান কোনায় সুন্দরভাবে ফিট ভাই */}
+              <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] hover:text-white">
+                <Heart size={22} className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
                 <span className="hidden lg:block text-xs font-bold pl-1.5">WISHLIST</span>
               </Link>
 
@@ -283,7 +287,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Desktop Only Account Dropdown */}
+              {/* Desktop Only Account Button */}
               <div className="hidden md:block">
                 {!isLoggedIn ? (
                   <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
@@ -308,10 +312,9 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
 
@@ -340,7 +343,7 @@ export default function Navbar() {
                   {activeCategory.subCategories && activeCategory.subCategories.length > 0 ? (
                     <div className="space-y-0.5">
                       {activeCategory.subCategories.map((sub: any) => (
-                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
+                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category={activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
                       ))}
                     </div>
                   ) : <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>}
@@ -375,20 +378,32 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🛠️ মোবাইল ক্যাটাগরি ড্রয়ার (নিচের Categories বাটনে ক্লিক করলে ওপেন হবে) */}
+      {/* 🛠️ মোবাইল ক্যাটাগরি ড্রয়ার (নিচের বারের Categories বাটনে ক্লিক করলে নিচ থেকে পপ-আপ হবে ভাই) */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[99999]">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-[#1a1a2e] overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <img src="/logo/logo.png" alt="onecarta logo" className="h-8 w-auto object-contain" />
-              <button onClick={() => setMobileOpen(false)} className="text-white"><X size={20} /></button>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
+          <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-[#1a1a2e] rounded-t-3xl overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 bg-[#1a1a2e] z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🗂️</span>
+                <span className="text-white font-black text-sm uppercase tracking-wider">All Categories</span>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-white p-1.5 bg-white/5 rounded-full"><X size={18} /></button>
             </div>
-            <div className="py-2">
-              <p className="px-4 py-2 text-xs text-gray-500 uppercase font-bold tracking-wider">Categories</p>
+            
+            <div className="p-2 grid grid-cols-1 divide-y divide-white/5 mb-12">
               {categoriesData.map((cat) => (
-                <Link key={cat.slug} href={`/products?category=${cat.slug}`} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white border-b border-white/5 transition-colors" onClick={() => setMobileOpen(false)}>
-                  <span className="text-lg">{cat.icon}</span><span className="font-medium">{cat.name}</span>
+                <Link 
+                  key={cat.slug} 
+                  href={`/products?category=${cat.slug}`} 
+                  className="flex items-center justify-between px-4 py-4 text-sm text-gray-200 hover:bg-white/5 active:bg-white/10 transition-all" 
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-xl bg-white/5 w-9 h-9 rounded-xl flex items-center justify-center">{cat.icon}</span>
+                    <span className="font-bold tracking-wide text-gray-100">{cat.name}</span>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-500" />
                 </Link>
               ))}
             </div>
@@ -396,7 +411,7 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* 📱 📱 [MOBILE FIXED BOTTOM NAVIGATION BAR] — সিকোয়েন্স: Home, Offer, Categories, Cart, Account */}
+      {/* 📱 📱 [MOBILE FIXED BOTTOM NAVIGATION BAR] — সিকোয়েন্স: Home, Offer, Categories, Cart, Account */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a1a2e] border-t border-white/10 shadow-2xl py-2 px-4 flex items-center justify-between z-[9999]">
         
         {/* ১. Home */}
@@ -414,7 +429,7 @@ export default function Navbar() {
         {/* ৩. Categories */}
         <button 
           onClick={() => setMobileOpen(true)} 
-          className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors"
+          className={`flex flex-col items-center justify-center transition-colors ${mobileOpen ? 'text-white' : 'text-[#a8a6d9] hover:text-white'}`}
         >
           <Menu size={20} />
           <span className="text-[10px] mt-0.5 font-bold">Categories</span>
@@ -428,21 +443,13 @@ export default function Navbar() {
           <ShoppingCart size={20} />
           <span className="text-[10px] mt-0.5 font-bold">Cart</span>
           {mounted && totalItems > 0 && (
-            <span className="absolute top-0 right-1 bg-red-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
-              {totalItems}
-            </span>
+            <span className="absolute top-0 right-1 bg-red-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">{totalItems}</span>
           )}
         </button>
 
         {/* ৫. Account */}
         <button 
-          onClick={() => {
-            if (isLoggedIn) {
-              router.push("/dashboard");
-            } else {
-              setIsAuthModalOpen(true);
-            }
-          }} 
+          onClick={() => { if (isLoggedIn) { router.push("/dashboard"); } else { setIsAuthModalOpen(true); } }} 
           className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors"
         >
           <User size={20} />
@@ -451,7 +458,7 @@ export default function Navbar() {
 
       </div>
 
-      {/* Cart Drawer */}
+      {/* Cart Drawer Components */}
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
 
       {/* Pop-up Auth Modal */}
