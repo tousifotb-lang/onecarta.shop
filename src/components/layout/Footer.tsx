@@ -65,7 +65,7 @@ export default function Footer() {
               {[
                 { name: "About Us", href: "/about" },
                 { name: "Contact Us", href: "/contact" },
-                { name: "Careers", href: "#" },
+                { name: "Careers", href: "/careers" }, // 🛠️ [CONNECTED]: ক্যারিয়ার পেজটি এখানে কানেক্ট করা হলো ভাই
                 { name: "Press", href: "#" },
                 { name: "Blog", href: "/blog" }
               ].map((link) => (
