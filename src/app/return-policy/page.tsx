@@ -13,7 +13,7 @@ export default function ReturnPolicy() {
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-[#1a1a2e] hover:text-[#2c2769] transition-colors uppercase tracking-wider mb-4">
             <ArrowLeft size={16} /> Back to Shop
           </Link>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[#1a1a2e] border-b-2 border-gray-100 pb-5 uppercase">
+          <h1 className="text-2xl sm:text-5xl font-black tracking-tight text-[#1a1a2e] border-b-2 border-gray-100 pb-5 uppercase">
             Return & Refund Policy 🔄
           </h1>
           <p className="text-sm text-gray-500 mt-2 italic">Last Updated: June 2026</p>
@@ -63,7 +63,7 @@ export default function ReturnPolicy() {
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>প্রোডাক্টটি সম্পূর্ণ অব্যবহৃত (Unused), ফ্রেশ এবং অক্ষত অবস্থায় থাকতে হবে।</li>
-              <li>অরিজিনাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টি কার্ড এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
+              <li>অরিじんাল প্রোডাক্ট বক্স, ট্যাগ, ওয়ারেন্টি কার্ড এবং ইনভয়েস অবশ্যই সাথে থাকতে হবে।</li>
               <li>ভুল প্রোডাক্ট, সাইজ বা ড্যামেজড প্রোডাক্টের ক্ষেত্রে কোনো এক্সট্রা চার্জ ছাড়াই রিটার্ন নেওয়া হবে।</li>
             </ul>
           </section>
@@ -78,7 +78,7 @@ export default function ReturnPolicy() {
             </p>
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>বিকাশ/নগদ বা অনলাইন পেমেন্টের ক্ষেত্রে যে অ্যাকাউন্ট থেকে টাকা এসেছে, সেই নম্বরেই রিফান্ড প্রসেস করা হবে।</li>
-              <li>ক্যাশ অন ডেলিভারির (COD) ক্ষেত্রে কাস্টমারের দেওয়া নির্দিষ্ট বিকাশ/নগদ বা ব্যাংক অ্যাকাউন্টে টাকা পাঠিয়ে দেওয়া হবে।</li>
+              <li>ক্যাশ অন ডেলিভারির (COD) ক্ষেত্রে কাস্টমারের দেওয়া নির্দিষ্ট বিকাশ/নগদ বা bank অ্যাকাউন্টে টাকা পাঠিয়ে দেওয়া হবে।</li>
             </ul>
           </section>
 
@@ -93,16 +93,16 @@ export default function ReturnPolicy() {
             <ul className="list-disc list-inside text-sm sm:text-base text-gray-600 font-medium pl-4 sm:pl-10 space-y-2">
               <li>প্রোডাক্ট বক্স বা ভেতরের কোনো এক্সেসরিজ/পলি হারিয়ে গেলে বা কোনোভাবে নষ্ট করলে।</li>
               <li>ক্লিয়ারেন্স সেল (Clearance Sale) বা স্পেশাল ধামাকা ডিসকাউন্টে কেনা কোনো প্রোডাক্ট।</li>
-              <li>ডেলিভারি নেওয়ার পর ৭ দিন পার হয়ে যাওয়ার পর আমাদের সাথে যোগাযোগ করলে।</li>
+              <li>ডেলিভারি নেওয়ার পর 7 দিন পার হয়ে যাওয়ার পর আমাদের সাথে যোগাযোগ করলে।</li>
             </ul>
           </section>
 
           {/* Important Note Box */}
-          <div className="bg-amber-500/5 border-2 border-amber-500/20 p-5 rounded-2xl flex gap-4 text-amber-900">
+          <div className="bg-amber-50/50 border-2 border-amber-500/20 p-5 rounded-2xl flex gap-4 text-amber-900">
             <AlertCircle size={24} className="flex-shrink-0 mt-0.5 text-amber-600" />
             <div className="text-sm sm:text-base font-semibold leading-relaxed">
-              <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">বিশেষ দ্রষ্টব্য:</span>
-              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে ডেলিভারি ম্যানের সামনেই আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
+              <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">विशेष দ্রষ্টব্য:</span>
+              ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
             </div>
           </div>
 
