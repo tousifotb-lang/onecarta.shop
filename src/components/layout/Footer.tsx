@@ -73,8 +73,8 @@ export default function Footer() {
                 { name: "Track My Order", href: "/track-order" },
                 { name: "Returns & Refunds", href: "/return-policy" },
                 { name: "Payment Methods", href: "/payment-methods" },
-                { name: "Shipping Info", href: "/shipping-info" }, // 🛠️ [CONNECTED]: শিপিং ইনফো পেজটি এখানে কানেক্ট করা হলো ভাই
-                { name: "FAQ", href: "#" },
+                { name: "Shipping Info", href: "/shipping-info" },
+                { name: "FAQ", href: "/faq" }, // 🛠️ [CONNECTED]: এফএকিউ পেজটি এখানে কানেক্ট করা হলো ভাই
               ].map((link) => (
                 <li key={link.name}>
                   <Link
