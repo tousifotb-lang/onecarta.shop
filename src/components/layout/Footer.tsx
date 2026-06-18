@@ -24,14 +24,35 @@ export default function Footer() {
               products, best prices, fast delivery.
             </p>
 
+            {/* 🛠️ [LINKED]: আপনার রিকোয়েস্ট অনুযায়ী কাস্টম ফোল্ডার পাথ ও ৪টি সোশ্যাল লাইভ লিংক এখানে সেট করা হলো ভাই */}
             <div className="flex items-center gap-3 mt-4">
-              {["f", "in", "tw", "yt"].map((icon, i) => (
+              {[
+                { name: "Facebook", src: "/images/socials/fb.png", href: "https://www.facebook.com/onecarta" },
+                { name: "Instagram", src: "/images/socials/instagram.png", href: "https://www.instagram.com/onecarta" },
+                { name: "Linkedin", src: "/images/socials/linkedin.png", href: "https://www.linkedin.com/company/onecarta-com" },
+                { name: "TikTok", src: "/images/socials/tiktok.png", href: "https://www.tiktok.com/@onecarta.comm" }
+              ].map((social, i) => (
                 <a
                   key={i}
-                  href="#"
-                  className="bg-gray-800 hover:bg-[#2c2769] w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-xs font-bold text-gray-300"
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gray-800 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 text-gray-300 hover:text-white hover:-translate-y-0.5 shadow-sm p-1.5 overflow-hidden border border-transparent hover:border-gray-700"
                 >
-                  {icon}
+                  <img
+                    src={social.src}
+                    alt={social.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      // ইমেজ কোনো কারণে লোড না হলে ব্যাকআপ হিসেবে টেক্সট দেখাবে
+                      (e.target as HTMLElement).style.display = 'none';
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.className = "bg-gray-800 text-[10px] uppercase font-bold text-gray-400 flex items-center justify-center w-9 h-9 rounded-xl";
+                        parent.innerText = social.name.substring(0, 2);
+                      }
+                    }}
+                  />
                 </a>
               ))}
             </div>
@@ -121,7 +142,7 @@ export default function Footer() {
               </li>
             </ul>
 
-            {/* 🛠️ [FIXED]: শেপের সাইজ ফিক্সড রেখে প্যাডিং কমিয়ে লোগো বড় করা হলো */}
+            {/* We Accept Grid */}
             <div className="mt-5">
               <p className="text-xs text-gray-500 mb-2.5 uppercase tracking-wider font-bold">We Accept</p>
 
