@@ -94,7 +94,7 @@ export default function PrivacyPolicy() {
               ৪. থার্ড-পার্টি ডিসক্লোজার (Third-Party Disclosure)
             </h2>
             <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed pl-0 sm:pl-6">
-              আমরা কাস্টমারের কোনো ব্যক্তিগত ডেটা বা ফোন নম্বর কোনো থার্ড-পার্টি কোম্পানির কাছে বিক্রি, ট্রেড বা লিজ দিই না। তবে আপনার পার্সেলটি আপনার ঠিকানায় পৌঁছে দেওয়ার স্বার্থে শুধুমাত্র প্রয়োজনীয় তথ্য (নাম, ফোন নম্বর ও ঠিকানা) আমাদের রেজিস্টার্ড কুরিয়ার পার্টনারদের (যেমন: পাথao, স্টিডফাস্ট) সাথে শেয়ার করা হয়।
+              আমরা কাস্টমারের কোনো ব্যক্তিগত ডেটা বা ফোন নম্বর কোনো থার্ড-পার্টি কোম্পানির কাছে বিক্রি, ট্রেড বা লিজ দিই না। তবে আপনার পার্সেলটি আপনার ঠিকানায় পৌঁছে দেওয়ার স্বার্থে শুধুমাত্র প্রয়োজনীয় তথ্য (নাম, ফোন নম্বর ও ঠিকানা) আমাদের রেজিস্টার্ড কুরিয়ার পার্টনারদের সাথে শেয়ার করা হয়।
             </p>
           </section>
 
@@ -113,7 +113,7 @@ export default function PrivacyPolicy() {
         <div className="text-center mt-12 space-y-2">
           <p className="text-sm text-gray-500 font-medium">প্রাইভেসি পলিসি নিয়ে কোনো প্রশ্ন থাকলে আমাদের সাথে যোগাযোগ করুন</p>
           <div className="flex items-center justify-center gap-x-2 gap-y-1 text-xs sm:text-lg font-black text-[#1a1a2e] flex-nowrap whitespace-nowrap">
-            <span className="flex items-center gap-1">📞 01303223513</span>
+            <span className="flex items-center gap-1">📞 +8809611576269</span>
             <span className="text-gray-300 font-normal">|</span>
             <span className="flex items-center gap-1">✉️ support@onecarta.shop</span>
           </div>
