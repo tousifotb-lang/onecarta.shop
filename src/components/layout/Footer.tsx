@@ -24,7 +24,7 @@ export default function Footer() {
               products, best prices, fast delivery.
             </p>
 
-            {/* 🛠️ [LINKED]: আপনার রিকোয়েস্ট অনুযায়ী কাস্টম ফোল্ডার পাথ ও ৪টি সোশ্যাল লাইভ লিংক এখানে সেট করা হলো ভাই */}
+            {/* 🛠️ [LINKED]: কাস্টম ফোল্ডার পাথ ও ৪টি সোশ্যাল লাইভ লিংক */}
             <div className="flex items-center gap-3 mt-4">
               {[
                 { name: "Facebook", src: "/images/socials/fb.png", href: "https://www.facebook.com/onecarta" },
@@ -44,7 +44,6 @@ export default function Footer() {
                     alt={social.name}
                     className="w-full h-full object-contain"
                     onError={(e) => {
-                      // ইমেজ কোনো কারণে লোড না হলে ব্যাকআপ হিসেবে টেক্সট দেখাবে
                       (e.target as HTMLElement).style.display = 'none';
                       const parent = (e.target as HTMLElement).parentElement;
                       if (parent) {
@@ -90,7 +89,7 @@ export default function Footer() {
 
             <ul className="space-y-2 text-sm">
               {[
-                { name: "Help Center", href: "#" },
+                { name: "Help Center", href: "/help-center" }, // 🛠️ [CONNECTED]: হেল্প সেন্টার পেজটি এখানে কানেক্ট করা হলো ভাই
                 { name: "Track My Order", href: "/track-order" },
                 { name: "Returns & Refunds", href: "/return-policy" },
                 { name: "Payment Methods", href: "/payment-methods" },
