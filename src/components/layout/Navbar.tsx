@@ -177,9 +177,6 @@ export default function Navbar() {
   const [userName, setUserName] = useState(""); 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🛠️ মোবাইল ভিউতে ভাঙা রোধে এক্সপ্যান্ডেড ওয়ান-লাইন সার্চ কন্ট্রোল স্টেট
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
   useEffect(() => {
     setMounted(true);
     const userSession = localStorage.getItem("isLoggedIn");
@@ -247,12 +244,12 @@ export default function Navbar() {
 
       {/* Main Navbar */}
       <div className="bg-[#1a1a2e] shadow-lg w-full">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-2.5">
 
-          {/* 🛠️ মোবাইল ও ডেক্সটপ ওয়ান-লাইন হেডার: ফ্লেক্সবক্স ভাঙন প্রতিরোধ লেআউট */}
-          <div className="flex items-center justify-between gap-4 w-full flex-nowrap">
+          {/* 🛠️ টপ রো: মোবাইলে লোগো থাকবে বামে এবং উইশলিস্ট থাকবে একদম ডানে */}
+          <div className="flex items-center justify-between w-full flex-nowrap">
             
-            {/* Left: Logo */}
+            {/* Left: Branding Logo */}
             <Link href="/" className="flex-shrink-0 flex items-center">
               <img 
                 src="/logo/logo.png" 
@@ -261,27 +258,18 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Center: Search Bar (ডেক্সটপে নরমাল ফুল স্পেস, মোবাইলে ড্রপডাউন চেক করে বসবে) */}
+            {/* Center Search Bar — Desktop Only */}
             <div className="hidden md:block flex-1 max-w-xl mx-4">
               <SearchBar />
             </div>
 
-            {/* Right: Actions / Wishlist & Mobile Search Icon */}
-            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-              
-              {/* 🛠️ মোবাইলের জন্য প্রিমিয়াম ক্লিক টু ওপেন সার্চ টগল আইকন */}
-              <button 
-                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="block md:hidden text-[#a8a6d9] hover:text-white p-1"
-              >
-                {mobileSearchOpen ? <X size={22} className="text-white" /> : <Search size={22} />}
-              </button>
-
+            {/* Right Side Icons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
                 <Gift size={13} /> OFFER
               </Link>
 
-              {/* Wishlist Button */}
+              {/* Wishlist Button: মোবাইলেও টপ রো-এর একদম ডান কোনায় সুন্দরভাবে থাকবে ভাই */}
               <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] hover:text-white">
                 <Heart size={22} />
                 <span className="hidden lg:block text-xs font-bold pl-1.5">WISHLIST</span>
@@ -299,7 +287,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Desktop Only Account Dropdown */}
+              {/* Desktop Only Account Button */}
               <div className="hidden md:block">
                 {!isLoggedIn ? (
                   <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
@@ -324,16 +312,14 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-
             </div>
+
           </div>
 
-          {/* 🛠️ মোবাইল সার্চ প্যানেল: আইকনে ক্লিক করলে এটি লোগোর নিচে ফুল-উইডথ ওয়ান-লাইন হয়ে স্মুথলি খুলবে ভাই */}
-          {mobileSearchOpen && (
-            <div className="block md:hidden w-full mt-3 bg-transparent animate-in slide-in-from-top-2 duration-200">
-              <SearchBar />
-            </div>
-          )}
+          {/* 🛠️ পার্মানেন্ট মোবাইল সার্চ বক্স রো: লোগো ও উইশলিস্টের ঠিক নিচে এটি ওয়ান-লাইন ফুল উইডথ থাকবে ভাই। টাইপ করলেও কোনো কিছুই আর ভাঙবে না! */}
+          <div className="block md:hidden w-full mt-2.5">
+            <SearchBar />
+          </div>
 
         </div>
       </div>
@@ -398,7 +384,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🛠️ মোবাইল ক্যাটাগরি ড্রয়ার (নিচের বারের Categories বাটনে ক্লিক করলে নিচ থেকে পপ-আপ হবে ভাই) */}
+      {/* 🛠— মোবাইল ক্যাটাগরি ড্রয়ার (বটমবারের Categories বাটনে ক্লিক করলে নিচ থেকে পপ-আপ হবে ভাই) */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[99999]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
