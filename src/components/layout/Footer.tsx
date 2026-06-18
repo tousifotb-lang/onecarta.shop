@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, Phone, MapPin } from "lucide-react";
 
@@ -10,7 +12,6 @@ export default function Footer() {
           {/* Brand & Logo */}
           <div>
             <Link href="/" className="inline-block mb-3">
-              {/* 🎨 [UPDATED]: ফুটারে পুরোনো টেক্সট লোগো সরিয়ে আপনার পার্সোনাল ইমেজ লোগো বসানো হলো */}
               <img 
                 src="/logo/logo.png" 
                 alt="onecarta logo" 
@@ -41,18 +42,22 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
 
             <ul className="space-y-2 text-sm">
-              {["About Us", "Contact Us", "Careers", "Press", "Blog"].map(
-                (l) => (
-                  <li key={l}>
-                    <Link
-                      href="#"
-                      className="hover:text-[#a8a6d9] transition-colors"
-                    >
-                      {l}
-                    </Link>
-                  </li>
-                )
-              )}
+              {[
+                { name: "About Us", href: "/about" },
+                { name: "Contact Us", href: "/contact" },
+                { name: "Careers", href: "#" },
+                { name: "Press", href: "#" },
+                { name: "Blog", href: "/blog" }
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="hover:text-[#a8a6d9] transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -64,19 +69,19 @@ export default function Footer() {
 
             <ul className="space-y-2 text-sm">
               {[
-                "Help Center",
-                "Track My Order",
-                "Returns & Refunds",
-                "Payment Methods",
-                "Shipping Info",
-                "FAQ",
-              ].map((l) => (
-                <li key={l}>
+                { name: "Help Center", href: "#" },
+                { name: "Track My Order", href: "/track-order" },
+                { name: "Returns & Refunds", href: "/return-policy" }, // 🛠️ [CONNECTED]: আপনার রিটার্ন পলিসি পেজের সাথে কানেক্ট করা হলো ভাই
+                { name: "Payment Methods", href: "#" },
+                { name: "Shipping Info", href: "#" },
+                { name: "FAQ", href: "#" },
+              ].map((link) => (
+                <li key={link.name}>
                   <Link
-                    href="#"
+                    href={link.href}
                     className="hover:text-[#a8a6d9] transition-colors"
                   >
-                    {l}
+                    {link.name}
                   </Link>
                 </li>
               ))}
