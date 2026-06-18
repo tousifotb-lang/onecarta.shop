@@ -31,7 +31,7 @@ export default function CareersPage() {
 
           <div className="space-y-4 text-base sm:text-lg text-gray-600 font-medium leading-relaxed pt-2">
             <p className="text-gray-900 font-black text-lg sm:text-xl">
-              নমস্কার/সালাম! ওয়ানকার্টায় আপনার আগ্রহের জন্য ধন্যবাদ।
+              ওয়ানকার্টায় আপনার আগ্রহের জন্য ধন্যবাদ।
             </p>
             <p>
               এই মুহূর্তে আমাদের টিমে নতুন কোনো Vacancy ফাঁকা নেই। তবে আমরা সবসময়ই প্রতিভাবান ও কঠোর পরিশ্রমী মানুষদের সাথে কানেক্টেড থাকতে পছন্দ করি।
