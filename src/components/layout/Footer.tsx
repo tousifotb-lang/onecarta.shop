@@ -74,7 +74,7 @@ export default function Footer() {
                 { name: "Returns & Refunds", href: "/return-policy" },
                 { name: "Payment Methods", href: "/payment-methods" },
                 { name: "Shipping Info", href: "/shipping-info" },
-                { name: "FAQ", href: "/faq" }, // 🛠️ [CONNECTED]: এফএকিউ পেজটি এখানে কানেক্ট করা হলো ভাই
+                { name: "FAQ", href: "/faq" },
               ].map((link) => (
                 <li key={link.name}>
                   <Link
@@ -121,17 +121,37 @@ export default function Footer() {
               </li>
             </ul>
 
+            {/* 🛠️ [UPDATED]: প্লেইন টেক্সট সরিয়ে এখানে প্রিমিয়াম লগো গ্রিড অ্যাড করা হলো ভাই */}
             <div className="mt-5">
-              <p className="text-xs text-gray-500 mb-2">We Accept</p>
+              <p className="text-xs text-gray-500 mb-2.5 uppercase tracking-wider font-bold">We Accept</p>
 
               <div className="flex flex-wrap gap-2">
-                {["bKash", "Nagad", "Visa", "MasterCard", "COD"].map((m) => (
-                  <span
-                    key={m}
-                    className="bg-gray-800 border border-gray-700 text-xs px-2 py-1 rounded text-gray-300"
+                {[
+                  { name: "bKash", src: "/images/payments/bkash.png" },
+                  { name: "Nagad", src: "/images/payments/nagad.png" },
+                  { name: "Visa", src: "/images/payments/visa.png" },
+                  { name: "MasterCard", src: "/images/payments/mastercard.png" },
+                  { name: "COD", src: "/images/payments/cod.png" }
+                ].map((m) => (
+                  <div
+                    key={m.name}
+                    className="bg-white border border-gray-700/30 p-1.5 rounded-md flex items-center justify-center w-12 h-8 shadow-xs transition-transform hover:scale-105"
                   >
-                    {m}
-                  </span>
+                    <img
+                      src={m.src}
+                      alt={m.name}
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        // যদি ইমেজ কোনো কারণে মিসিং থাকে, তবে টেক্সট ব্যাকআপ হিসেবে শো করবে
+                        (e.target as HTMLElement).style.display = 'none';
+                        const parent = (e.target as HTMLElement).parentElement;
+                        if (parent) {
+                          parent.className = "bg-gray-800 border border-gray-700 text-[10px] px-1.5 py-1 rounded text-gray-300 font-bold";
+                          parent.innerText = m.name;
+                        }
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -145,12 +165,10 @@ export default function Footer() {
           <p>© 2026 Onecarta. All rights reserved.</p>
 
           <div className="flex items-center gap-4 mt-2 md:mt-0">
-            {/* 🛠️ প্রাইভেসি পলিসি পেজটি কানেক্টেড */}
             <Link href="/privacy-policy" className="hover:text-[#a8a6d9] transition-colors">
               Privacy Policy
             </Link>
 
-            {/* 🛠️ টার্মস অ্যান্ড কন্ডিশনস পেজটি কানেক্টেড */}
             <Link href="/terms-conditions" className="hover:text-[#a8a6d9] transition-colors">
               Terms & Conditions
             </Link>
