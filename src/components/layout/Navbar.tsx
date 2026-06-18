@@ -223,7 +223,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50 overflow-x-hidden md:overflow-visible">
+    <header className="w-full sticky top-0 z-50 overflow-visible">
 
       {/* Top Bar — desktop only */}
       <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
@@ -244,35 +244,38 @@ export default function Navbar() {
 
       {/* Main Navbar */}
       <div className="bg-[#1a1a2e] shadow-lg w-full">
-        <div className="max-w-7xl mx-auto px-3 py-2.5">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2.5">
 
-          {/* 🛠️ ফিক্সড ওয়ান-লাইন মোবাইল লেআউট: লোগো বামে, সার্চবার মাঝে, উইশলিস্ট ডানে */}
-          <div className="flex items-center justify-between gap-2 md:gap-4 w-full">
+          {/* 🛠️ ফিক্সড ওয়ান-লাইন লেআউট: flex-nowrap এবং সূক্ষ্ম গ্যাপ দিয়ে মোবাইল সার্চবারের ভেঙে পড়া পুরোপুরি রোধ করা হলো */}
+          <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full flex-nowrap">
             
-            {/* Left: Branding Logo (বামে লোগো ফিক্সড ভাই) */}
+            {/* Left: Branding Logo (মোবাইলে ম্যাক্স-উইডথ ও সংকোচন রোধ টাইট করা হলো ভাই) */}
             <Link href="/" className="flex-shrink-0 flex items-center">
               <img 
                 src="/logo/logo.png" 
                 alt="onecarta logo" 
-                className="h-6 sm:h-7 md:h-10 w-auto max-w-[90px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
+                className="h-[22px] sm:h-7 md:h-10 w-auto max-w-[75px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
               />
             </Link>
 
-            {/* Center: Search Bar (মোবাইল ও ডেস্কটপ দুই জায়গাতেই এক লাইনে মাঝখানে থাকবে) */}
-            <div className="flex-1 min-w-0">
+            {/* Center: Search Bar (w-full এবং min-w-0 এর সাহায্যে ফ্লেক্স রেন্ডারিং একদম সোজা ওয়ান-লাইনে থাকবে) */}
+            <div className="flex-1 min-w-0 w-full">
               <SearchBar />
             </div>
 
-            {/* Right: Actions / Wishlist (ডান পাশে উইশলিস্ট) */}
-            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+            {/* Right: Actions / Wishlist */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
                 <Gift size={13} /> OFFER
               </Link>
 
-              {/* Wishlist Button: মোবাইলেও এক লাইনে ডান কোনায় সুন্দরভাবে ফিট ভাই */}
-              <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] hover:text-white">
-                <Heart size={22} className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
-                <span className="hidden lg:block text-xs font-bold pl-1.5">WISHLIST</span>
+              {/* 🛠️ [FIXED WISHLIST BUTTON] — ডেস্কটপ বর্ডার ও হোভার ডিজাইন বাকি সব বাটনের সাথে ১০০% ম্যাচ করা হলো ভাই */}
+              <Link 
+                href="/wishlist" 
+                className="relative p-1 text-[#a8a6d9] md:text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <Heart size={20} className="w-[19px] h-[19px] sm:w-4 sm:h-4" />
+                <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
               </Link>
 
               {/* Desktop Only Cart Button */}
@@ -280,7 +283,7 @@ export default function Navbar() {
                 onClick={() => setCartOpen(true)}
                 className={`hidden md:flex relative p-1.5 items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${isAnimate ? "scale-110" : "scale-100"}`}
               >
-                <ShoppingCart size={18} />
+                <ShoppingCart size={16} />
                 <span className="hidden lg:block text-xs font-bold">CART</span>
                 {mounted && totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{totalItems}</span>
@@ -291,7 +294,7 @@ export default function Navbar() {
               <div className="hidden md:block">
                 {!isLoggedIn ? (
                   <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <User size={18} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
+                    <User size={16} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
                   </button>
                 ) : (
                   <div className="relative" ref={dropdownRef}>
@@ -343,7 +346,7 @@ export default function Navbar() {
                   {activeCategory.subCategories && activeCategory.subCategories.length > 0 ? (
                     <div className="space-y-0.5">
                       {activeCategory.subCategories.map((sub: any) => (
-                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category={activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
+                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
                       ))}
                     </div>
                   ) : <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>}
