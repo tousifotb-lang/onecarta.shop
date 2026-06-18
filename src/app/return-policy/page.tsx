@@ -101,7 +101,7 @@ export default function ReturnPolicy() {
           <div className="bg-amber-50/50 border-2 border-amber-500/20 p-5 rounded-2xl flex gap-4 text-amber-900">
             <AlertCircle size={24} className="flex-shrink-0 mt-0.5 text-amber-600" />
             <div className="text-sm sm:text-base font-semibold leading-relaxed">
-              <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">विशेष দ্রষ্টব্য:</span>
+              <span className="font-black uppercase tracking-wider block mb-1 text-amber-800 text-base">বিশেষ দ্রষ্টব্য:</span>
               ডেলিভারি ম্যানের সামনেই প্রোডাক্ট চেক করে রিসিভ করার জন্য বিশেষভাবে অনুরোধ করা হচ্ছে। কোনো প্রকার বাহ্যিক ক্ষতি (Physical Damage) বা ভুল প্রোডাক্ট থাকলে আমাদের হটলাইনে কল দিয়ে পার্সেলটি রিটার্ন করে দিন।
             </div>
           </div>
