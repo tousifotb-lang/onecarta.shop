@@ -177,9 +177,14 @@ export default function Navbar() {
   const [userName, setUserName] = useState(""); 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🛠️ শুধুমাত্র মোবাইলের নেস্টেড একর্ডিয়নের জন্য ৩-লেভেল ড্রপডাউন স্টেট ভাই
+  // শুধুমাত্র মোবাইলের নেস্টেড একর্ডিয়নের জন্য ৩-লেভেল ড্রপডাউন স্টেট
   const [openMobileMainSlug, setOpenMobileMainSlug] = useState<string | null>(null);
   const [openMobileSubSlug, setOpenMobileSubSlug] = useState<string | null>(null);
+
+  // 🛠️ আঙুল দিয়ে নিচে স্লাইড করে ড্রয়ার বন্ধ করার টাচ ট্র্যাকিং স্টেট ভাই
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchCurrent, setTouchCurrent] = useState<number | null>(null);
+  const [isDragging, setIsAnimateDragging] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -236,6 +241,40 @@ export default function Navbar() {
     e.stopPropagation(); 
     setOpenMobileSubSlug(openMobileSubSlug === slug ? null : slug);
   };
+
+  // 🛠️ স্লাইড ডাউন টু ক্লোজ লজিক ফাংশনসমূহ ভাই
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientY);
+    setIsAnimateDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const currentY = e.targetTouches[0].clientY;
+    // শুধু নিচের দিকে টানলে ট্রান্সলেট ইফেক্ট কাউন্ট হবে
+    if (currentY > touchStart) {
+      setTouchCurrent(currentY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStart !== null && touchCurrent !== null) {
+      const swipeDistance = touchCurrent - touchStart;
+      // যদি আঙুল দিয়ে ১০০ পিক্সেলের বেশি নিচে টানা হয়, তবে ড্রয়ার বন্ধ হয়ে যাবে
+      if (swipeDistance > 100) {
+        setMobileOpen(false);
+      }
+    }
+    // রিলিজ ও স্টেট রিসেট
+    setTouchStart(null);
+    setTouchCurrent(null);
+    setIsAnimateDragging(false);
+  };
+
+  // রিয়েল-টাইম ড্র্যাগিং ডিস্ট্যান্স পিক্সেল ক্যালকুলেশন
+  const dragStyle = touchStart !== null && touchCurrent !== null && touchCurrent > touchStart
+    ? { transform: `translateY(${touchCurrent - touchStart}px)`, transition: "none" }
+    : {};
 
   return (
     <header className="w-full sticky top-0 z-50 overflow-x-hidden md:overflow-visible">
@@ -393,14 +432,27 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🛠️ [SMART 3-LEVEL MOBILE ACCORDION DRAWER] — টেক্সট ও সিলেক্টেড কালার থিম ফিক্সড করা হলো */}
+      {/* 🛠️ [SMART 3-LEVEL MOBILE ACCORDION DRAWER] — স্লাইড ডাউন টু ক্লোজ ইভেন্ট সহ ভাই */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[99999]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[75vh] bg-[#1a1a2e] rounded-t-3xl overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-300">
+          
+          {/*onTouch ইভেন্টগুলো এখানে বাইন্ড করা হয়েছে*/}
+          <div 
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={dragStyle}
+            className="absolute bottom-0 left-0 right-0 max-h-[75vh] bg-[#1a1a2e] rounded-t-3xl overflow-y-auto shadow-2xl transition-transform duration-300 ease-out select-none will-change-transform"
+          >
             
+            {/* 🛠️ ড্রয়ারের ওপরে একটি অ্যাপ স্টাইল সুন্দর 'টান মারার হ্যান্ডেলবার' আইকন */}
+            <div className="w-full flex justify-center py-2.5 cursor-grab active:cursor-grabbing">
+              <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+            </div>
+
             {/* Drawer Header */}
-            <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 bg-[#1a1a2e] z-10">
+            <div className="flex items-center justify-between px-5 pb-4 pt-1 border-b border-white/10 sticky top-0 bg-[#1a1a2e] z-10">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🗂️</span>
                 <span className="text-white font-black text-sm uppercase tracking-wider">All Categories</span>
@@ -417,7 +469,7 @@ export default function Navbar() {
                 return (
                   <div key={cat.slug} className="border-b border-white/5 last:border-0">
                     
-                    {/* LEVEL 1: Main Category Row (সিলেক্টেড হলে থিম কালার হাইলাইট) */}
+                    {/* LEVEL 1 */}
                     <div 
                       onClick={() => {
                         if (hasSubs) {
@@ -438,7 +490,7 @@ export default function Navbar() {
                       )}
                     </div>
 
-                    {/* LEVEL 2: Sub Categories Wrapper */}
+                    {/* LEVEL 2 */}
                     {hasSubs && isMainOpen && (
                       <div className="pl-6 pr-2 py-1 bg-black/20 rounded-xl mt-1 space-y-0.5 animate-in fade-in duration-200">
                         {cat.subCategories.map((sub: any) => {
@@ -448,7 +500,6 @@ export default function Navbar() {
                           return (
                             <div key={sub.slug} className="rounded-lg">
                               
-                              {/* Sub Category Row (টেক্সট কালার হোয়াইট এবং সিলেক্টেড হলে থিম কালার) */}
                               <div
                                 onClick={(e) => {
                                   if (hasChildren) {
@@ -466,7 +517,7 @@ export default function Navbar() {
                                 )}
                               </div>
 
-                              {/* LEVEL 3: Child/Micro Categories Wrapper */}
+                              {/* LEVEL 3 */}
                               {hasChildren && isSubOpen && (
                                 <div className="pl-4 pr-1 pb-2 grid grid-cols-1 gap-1 animate-in slide-in-from-top-1 duration-200">
                                   {sub.childCategories.map((child: any) => (
