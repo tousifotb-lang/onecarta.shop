@@ -162,7 +162,7 @@ export default function Navbar() {
   const totalItems = currentCartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const [mounted, setMounted] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false); // বটমবারের Categories টগল করার জন্য ভাই
+  const [mobileOpen, setMobileOpen] = useState(false); 
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState(categoriesData[0]); 
@@ -177,7 +177,7 @@ export default function Navbar() {
   const [userName, setUserName] = useState(""); 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🛠️ শুধুমাত্র মোবাইলের নেস্টেড একর্ডিয়নের জন্য নতুন স্টেট ভাই
+  // 🛠️ শুধুমাত্র মোবাইলের নেস্টেড একর্ডিয়নের জন্য ৩-লেভেল ড্রপডাউন স্টেট ভাই
   const [openMobileMainSlug, setOpenMobileMainSlug] = useState<string | null>(null);
   const [openMobileSubSlug, setOpenMobileSubSlug] = useState<string | null>(null);
 
@@ -226,14 +226,14 @@ export default function Navbar() {
     window.location.href = "/"; 
   };
 
-  // মোবাইল ক্লিকের একর্ডিয়ন হ্যান্ডলার ফাংশনসমূহ
+  // মোবাইল নেভিগেশন একর্ডিয়ন ক্লিক হ্যান্ডলার
   const toggleMobileMain = (slug: string) => {
     setOpenMobileMainSlug(openMobileMainSlug === slug ? null : slug);
-    setOpenMobileSubSlug(null); // মেইন ক্যাটাগরি পাল্টালে সাব-ক্যাটাগরি রিফ্রেস হবে
+    setOpenMobileSubSlug(null); 
   };
 
   const toggleMobileSub = (e: React.MouseEvent, slug: string) => {
-    e.stopPropagation(); // প্যারেন্ট ট্র্রিগার যেন অফ থাকে
+    e.stopPropagation(); 
     setOpenMobileSubSlug(openMobileSubSlug === slug ? null : slug);
   };
 
@@ -261,33 +261,33 @@ export default function Navbar() {
       <div className="bg-[#1a1a2e] shadow-lg w-full">
         <div className="max-w-7xl mx-auto px-3 py-2.5">
 
-          {/* 🛠️ ফিক্সড মোবাইল লেআউট: flex-nowrap নিশ্চিত করা হলো যাতে টাইপ বা সার্চ করলেও কোনো এলিমেন্ট নিচে না নামে */}
-          <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full flex-nowrap">
+          {/* ফিক্সড ওয়ান-লাইন মোবাইল লেআউট */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 w-full flex-nowrap">
             
-            {/* Left: Branding Logo (আপনার অরিজিংনাল স্টাইল ও সাইজ অক্ষত) */}
+            {/* Left: Branding Logo */}
             <Link href="/" className="flex-shrink-0 flex items-center">
               <img 
                 src="/logo/logo.png" 
                 alt="onecarta logo" 
-                className="h-6 sm:h-7 md:h-10 w-auto max-w-[75px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
+                className="h-6 sm:h-7 md:h-10 w-auto max-w-[90px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
               />
             </Link>
 
-            {/* Center: Search Bar (min-w-0 এর সাহায্যে ফ্লেক্স সংকোচন হ্যান্ডেল করা হয়েছে যাতে ওয়ান-লাইনে ফিক্সড থাকে) */}
-            <div className="flex-1 min-w-0 w-full">
+            {/* Center: Search Bar */}
+            <div className="flex-1 min-w-0">
               <SearchBar />
             </div>
 
-            {/* Right: Actions / Wishlist (আপনার অরিজিংনাল স্টাইল ও কোড অক্ষত) */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            {/* Right: Actions / Wishlist */}
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
                 <Gift size={13} /> OFFER
               </Link>
 
-              {/* Wishlist Button - অরিজিনাল কোড */}
-              <Link href="/wishlist" className="relative p-1 text-[#a8a6d9] md:text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
-                <Heart size={20} className="w-[19px] h-[19px] sm:w-4 sm:h-4" />
-                <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
+              {/* Wishlist Button */}
+              <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] hover:text-white">
+                <Heart size={22} className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
+                <span className="hidden lg:block text-xs font-bold pl-1.5">WISHLIST</span>
               </Link>
 
               {/* Desktop Only Cart Button */}
@@ -295,7 +295,7 @@ export default function Navbar() {
                 onClick={() => setCartOpen(true)}
                 className={`hidden md:flex relative p-1.5 items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${isAnimate ? "scale-110" : "scale-100"}`}
               >
-                <ShoppingCart size={16} />
+                <ShoppingCart size={18} />
                 <span className="hidden lg:block text-xs font-bold">CART</span>
                 {mounted && totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{totalItems}</span>
@@ -306,7 +306,7 @@ export default function Navbar() {
               <div className="hidden md:block">
                 {!isLoggedIn ? (
                   <button onClick={() => setIsAuthModalOpen(true)} className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <User size={16} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
+                    <User size={18} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
                   </button>
                 ) : (
                   <div className="relative" ref={dropdownRef}>
@@ -333,7 +333,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🟦 [3-LEVEL MEGAMENU BAR] — Desktop Only (বিন্দুমাত্র টাচ করা হয়নি ভাই) */}
+      {/* 🟦 [3-LEVEL MEGAMENU BAR] — Desktop Only */}
       <div className="bg-white text-gray-700 hidden md:block shadow-sm relative border-b border-gray-100">
         <div className="container-main flex items-center">
           <div className="relative" onMouseEnter={() => setMegaMenuOpen(true)} onMouseLeave={() => setMegaMenuOpen(false)}>
@@ -393,7 +393,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🛠️ [SMART 3-LEVEL MOBILE ACCORDION DRAWER] — শুধুমাত্র মোবাইলের একর্ডিয়ন প্যানেল */}
+      {/* 🛠️ [SMART 3-LEVEL MOBILE ACCORDION DRAWER] — টেক্সট ও সিলেক্টেড কালার থিম ফিক্সড করা হলো */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[99999]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
@@ -417,7 +417,7 @@ export default function Navbar() {
                 return (
                   <div key={cat.slug} className="border-b border-white/5 last:border-0">
                     
-                    {/* LEVEL 1: Main Category Row */}
+                    {/* LEVEL 1: Main Category Row (সিলেক্টেড হলে থিম কালার হাইলাইট) */}
                     <div 
                       onClick={() => {
                         if (hasSubs) {
@@ -427,14 +427,14 @@ export default function Navbar() {
                           router.push(`/products?category=${cat.slug}`);
                         }
                       }}
-                      className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all cursor-pointer ${isMainOpen ? 'bg-white/5 text-white' : 'text-gray-200 active:bg-white/5'}`}
+                      className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all cursor-pointer ${isMainOpen ? 'bg-[#a8a6d9]/10 text-[#a8a6d9]' : 'text-white active:bg-white/5'}`}
                     >
                       <div className="flex items-center gap-3.5">
                         <span className="text-xl bg-white/5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">{cat.icon}</span>
                         <span className="font-bold tracking-wide">{cat.name}</span>
                       </div>
                       {hasSubs && (
-                        <ChevronDown size={16} className={`text-gray-500 transition-transform duration-200 ${isMainOpen ? 'rotate-180 text-white' : ''}`} />
+                        <ChevronDown size={16} className={`transition-transform duration-200 ${isMainOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
                       )}
                     </div>
 
@@ -448,7 +448,7 @@ export default function Navbar() {
                           return (
                             <div key={sub.slug} className="rounded-lg">
                               
-                              {/* Sub Category Row */}
+                              {/* Sub Category Row (টেক্সট কালার হোয়াইট এবং সিলেক্টেড হলে থিম কালার) */}
                               <div
                                 onClick={(e) => {
                                   if (hasChildren) {
@@ -458,11 +458,11 @@ export default function Navbar() {
                                     router.push(`/products?category=${cat.slug}&sub=${sub.slug}`);
                                   }
                                 }}
-                                className={`flex items-center justify-between px-3 py-3 rounded-lg text-xs font-bold cursor-pointer ${isSubOpen ? 'text-[#a8a6d9]' : 'text-gray-400 active:bg-white/5'}`}
+                                className={`flex items-center justify-between px-3 py-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${isSubOpen ? 'text-[#a8a6d9] bg-[#a8a6d9]/5' : 'text-white hover:text-[#a8a6d9] active:bg-white/5'}`}
                               >
                                 <span className="truncate">{sub.name}</span>
                                 {hasChildren && (
-                                  <ChevronDown size={14} className={`text-gray-600 transition-transform duration-200 ${isSubOpen ? 'rotate-180 text-[#a8a6d9]' : ''}`} />
+                                  <ChevronDown size={14} className={`transition-transform duration-200 ${isSubOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
                                 )}
                               </div>
 
@@ -474,9 +474,9 @@ export default function Navbar() {
                                       key={child.slug}
                                       href={`/products?category=${cat.slug}&sub=${sub.slug}&child=${child.slug}`}
                                       onClick={() => setMobileOpen(false)}
-                                      className="text-[11px] font-semibold text-gray-500 hover:text-white active:text-white py-2 px-2.5 rounded-md bg-white/5 border border-transparent active:border-white/10 flex items-center gap-2"
+                                      className="text-[11px] font-bold text-gray-200 hover:text-[#a8a6d9] active:text-[#a8a6d9] py-2.5 px-3 rounded-md bg-white/5 border border-transparent active:border-white/10 flex items-center gap-2"
                                     >
-                                      <div className="w-1 h-1 rounded-full bg-gray-600" />
+                                      <div className="w-1 h-1 rounded-full bg-[#a8a6d9]" />
                                       <span>{child.name}</span>
                                     </Link>
                                   ))}
