@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ShoppingCart, Heart, User, Menu, X,
   Gift, BookOpen, CreditCard, Store, Package, Phone,
-  ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle, Search
+  ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle
 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import CartDrawer from "@/components/cart/CartDrawer"; 
@@ -162,7 +162,7 @@ export default function Navbar() {
   const totalItems = currentCartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const [mounted, setMounted] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false); 
+  const [mobileOpen, setMobileOpen] = useState(false); // বটমবারের Categories টগল করার জন্য ভাই
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState(categoriesData[0]); 
@@ -223,7 +223,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50 overflow-visible">
+    <header className="w-full sticky top-0 z-50 overflow-x-hidden md:overflow-visible">
 
       {/* Top Bar — desktop only */}
       <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
@@ -244,34 +244,34 @@ export default function Navbar() {
 
       {/* Main Navbar */}
       <div className="bg-[#1a1a2e] shadow-lg w-full">
-        <div className="max-w-7xl mx-auto px-4 py-2.5">
+        <div className="max-w-7xl mx-auto px-3 py-2.5">
 
-          {/* 🛠️ টপ রো: মোবাইলে লোগো থাকবে বামে এবং উইশলিস্ট থাকবে একদম ডানে */}
-          <div className="flex items-center justify-between w-full flex-nowrap">
+          {/* 🛠️ ফিক্সড ওয়ান-লাইন মোবাইল লেআউট: লোগো বামে, সার্চবার মাঝে, উইশলিস্ট ডানে */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 w-full">
             
-            {/* Left: Branding Logo */}
+            {/* Left: Branding Logo (বামে লোগো ফিক্সড ভাই) */}
             <Link href="/" className="flex-shrink-0 flex items-center">
               <img 
                 src="/logo/logo.png" 
                 alt="onecarta logo" 
-                className="h-7 sm:h-8 md:h-10 w-auto object-contain transition-transform hover:scale-105" 
+                className="h-6 sm:h-7 md:h-10 w-auto max-w-[90px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105" 
               />
             </Link>
 
-            {/* Center Search Bar — Desktop Only */}
-            <div className="hidden md:block flex-1 max-w-xl mx-4">
+            {/* Center: Search Bar (মোবাইল ও ডেস্কটপ দুই জায়গাতেই এক লাইনে মাঝখানে থাকবে) */}
+            <div className="flex-1 min-w-0">
               <SearchBar />
             </div>
 
-            {/* Right Side Icons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Right: Actions / Wishlist (ডান পাশে উইশলিস্ট) */}
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
                 <Gift size={13} /> OFFER
               </Link>
 
-              {/* Wishlist Button: মোবাইলেও টপ রো-এর একদম ডান কোনায় সুন্দরভাবে থাকবে ভাই */}
+              {/* Wishlist Button: মোবাইলেও এক লাইনে ডান কোনায় সুন্দরভাবে ফিট ভাই */}
               <Link href="/wishlist" className="relative p-1 text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-[#a8a6d9] hover:text-white">
-                <Heart size={22} />
+                <Heart size={22} className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
                 <span className="hidden lg:block text-xs font-bold pl-1.5">WISHLIST</span>
               </Link>
 
@@ -315,12 +315,6 @@ export default function Navbar() {
             </div>
 
           </div>
-
-          {/* 🛠️ পার্মানেন্ট মোবাইল সার্চ বক্স রো: লোগো ও উইশলিস্টের ঠিক নিচে এটি ওয়ান-লাইন ফুল উইডথ থাকবে ভাই। টাইপ করলেও কোনো কিছুই আর ভাঙবে না! */}
-          <div className="block md:hidden w-full mt-2.5">
-            <SearchBar />
-          </div>
-
         </div>
       </div>
 
@@ -349,7 +343,7 @@ export default function Navbar() {
                   {activeCategory.subCategories && activeCategory.subCategories.length > 0 ? (
                     <div className="space-y-0.5">
                       {activeCategory.subCategories.map((sub: any) => (
-                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
+                        <div key={sub.slug} onMouseEnter={() => setActiveSubCategory(sub)} onClick={() => { setMegaMenuOpen(false); router.push(`/products?category={activeCategory.slug}&sub=${sub.slug}`); }} className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory && activeSubCategory.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}><span className="truncate">{sub.name}</span><ChevronRight size={11} className="text-gray-300" /></div>
                       ))}
                     </div>
                   ) : <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>}
@@ -384,7 +378,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 🛠— মোবাইল ক্যাটাগরি ড্রয়ার (বটমবারের Categories বাটনে ক্লিক করলে নিচ থেকে পপ-আপ হবে ভাই) */}
+      {/* 🛠️ মোবাইল ক্যাটাগরি ড্রয়ার (নিচের বারের Categories বাটনে ক্লিক করলে নিচ থেকে পপ-আপ হবে ভাই) */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[99999]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
