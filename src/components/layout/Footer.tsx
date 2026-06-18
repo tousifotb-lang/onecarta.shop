@@ -99,7 +99,7 @@ export default function Footer() {
                   className="mt-0.5 flex-shrink-0"
                   style={{ color: "#a8a6d9" }}
                 />
-                <span>Nowpara, Rajshahi Sadar, Rajshahi 6000, Bangladesh</span>
+                <span>Nawdapara, Rajshahi Sadar, Rajshahi 6000, Bangladesh</span>
               </li>
 
               <li className="flex items-center gap-2">
