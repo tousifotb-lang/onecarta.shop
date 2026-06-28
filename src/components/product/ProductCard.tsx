@@ -6,7 +6,6 @@ import { Heart, ShoppingCart, Check } from "lucide-react";
 import { useState } from "react";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
-import StarRating from "@/components/ui/StarRating";
 import { useCartStore } from "@/store/cartStore";
 
 interface Props {
@@ -14,7 +13,6 @@ interface Props {
   listView?: boolean;
 }
 
-// ✅ Image URL helper
 function getImageUrl(image: string | { url: string } | undefined): string {
   if (!image) return "https://placehold.co/400x400/2c2769/white?text=No+Image";
   if (typeof image === "string") return image;
@@ -26,10 +24,7 @@ export default function ProductCard({ product, listView = false }: Props) {
   const [added, setAdded] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
 
-  // ✅ name অথবা title
   const productName = product.name || product.title || "Unknown Product";
-
-  // ✅ image
   const productImage = getImageUrl(product.images?.[0]);
 
   const displayPrice = product.isFlashSale && product.flashSalePrice
@@ -60,7 +55,6 @@ export default function ProductCard({ product, listView = false }: Props) {
   if (listView) {
     return (
       <div className="bg-white border border-gray-100 rounded-xl flex flex-row gap-3 p-2.5 shadow-sm hover:shadow-md transition-all group relative">
-        {/* Image — Left */}
         <div className="relative flex-shrink-0 w-28 h-28 bg-gray-50/70 rounded-lg overflow-hidden">
           {discountPercent > 0 && (
             <span className="absolute top-1 left-1 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
@@ -78,7 +72,6 @@ export default function ProductCard({ product, listView = false }: Props) {
           </Link>
         </div>
 
-        {/* Info — Right */}
         <div className="flex flex-col flex-1 justify-between py-0.5">
           <div>
             <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
@@ -89,10 +82,6 @@ export default function ProductCard({ product, listView = false }: Props) {
                 {productName}
               </h3>
             </Link>
-          </div>
-
-          <div className="scale-90 origin-left my-0.5">
-            <StarRating rating={product.rating} count={product.reviewCount} />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -135,7 +124,7 @@ export default function ProductCard({ product, listView = false }: Props) {
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-2.5 shadow-sm hover:shadow-md hover:border-gray-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full group relative">
 
-      {/* 1. Image Area */}
+      {/* Image */}
       <div className="relative w-full aspect-square bg-gray-50/60 rounded-lg overflow-hidden mb-2">
         {discountPercent > 0 && (
           <span className="absolute top-1.5 left-1.5 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
@@ -159,26 +148,25 @@ export default function ProductCard({ product, listView = false }: Props) {
             alt={productName}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
-            className="object-contain p-1 group-hover:scale-102 transition-transform duration-300"
+            className="object-contain p-1 group-hover:scale-105 transition-transform duration-300"
           />
         </Link>
       </div>
 
-      {/* 2. Product Info */}
+      {/* Info */}
       <div className="flex flex-col flex-grow">
         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">
           {product.category}
         </span>
 
-        <Link href={`/products/${product.slug}`} className="block mb-1.5">
-          <h3 className="text-xs font-bold text-gray-800 group-hover:text-[#2c2769] transition-colors line-clamp-2 h-9 leading-tight">
+        {/* ✅ 2 line এর বেশি হলে ... দেখাবে */}
+        <Link href={`/products/${product.slug}`} className="block mb-2">
+          <h3 className="text-xs font-bold text-gray-800 group-hover:text-[#2c2769] transition-colors line-clamp-2 leading-tight">
             {productName}
           </h3>
         </Link>
 
-        <div className="mb-2 scale-90 origin-left">
-          <StarRating rating={product.rating} count={product.reviewCount} />
-        </div>
+        {/* ✅ Star Rating সরানো হয়েছে */}
 
         <div className="mt-auto flex items-center justify-between gap-1 mb-2">
           <div className="flex items-baseline gap-1 flex-wrap">
@@ -202,7 +190,7 @@ export default function ProductCard({ product, listView = false }: Props) {
         </div>
       </div>
 
-      {/* 3. Add to Cart Button */}
+      {/* Button */}
       <button
         onClick={handleAddToCart}
         disabled={product.stock === 0}
