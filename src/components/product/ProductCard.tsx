@@ -14,24 +14,38 @@ interface Props {
   listView?: boolean;
 }
 
+// ✅ Image URL helper
+function getImageUrl(image: string | { url: string } | undefined): string {
+  if (!image) return "https://placehold.co/400x400/2c2769/white?text=No+Image";
+  if (typeof image === "string") return image;
+  if (image?.url) return image.url;
+  return "https://placehold.co/400x400/2c2769/white?text=No+Image";
+}
+
 export default function ProductCard({ product, listView = false }: Props) {
   const [added, setAdded] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
+
+  // ✅ name অথবা title
+  const productName = product.name || product.title || "Unknown Product";
+
+  // ✅ image
+  const productImage = getImageUrl(product.images?.[0]);
 
   const displayPrice = product.isFlashSale && product.flashSalePrice
     ? product.flashSalePrice
     : product.price;
 
-  const discountPercent = Math.round(
-    ((product.originalPrice - displayPrice) / product.originalPrice) * 100
-  );
+  const discountPercent = product.originalPrice > displayPrice
+    ? Math.round(((product.originalPrice - displayPrice) / product.originalPrice) * 100)
+    : 0;
 
   const handleAddToCart = () => {
     addItem({
       _id: product._id,
-      name: product.name,
+      name: productName,
       slug: product.slug,
-      image: product.images[0] || "",
+      image: productImage,
       price: displayPrice,
       originalPrice: product.originalPrice,
       category: product.category,
@@ -55,8 +69,8 @@ export default function ProductCard({ product, listView = false }: Props) {
           )}
           <Link href={`/products/${product.slug}`} className="w-full h-full block p-1">
             <Image
-              src={product.images[0] || "https://placehold.co/400x400/2c2769/white?text=No+Image"}
-              alt={product.name}
+              src={productImage}
+              alt={productName}
               fill
               className="object-contain p-1 group-hover:scale-105 transition-transform duration-300"
               sizes="112px"
@@ -72,7 +86,7 @@ export default function ProductCard({ product, listView = false }: Props) {
             </span>
             <Link href={`/products/${product.slug}`}>
               <h3 className="text-xs font-bold text-gray-800 hover:text-[#2c2769] transition-colors mt-0.5 line-clamp-2 leading-tight">
-                {product.name}
+                {productName}
               </h3>
             </Link>
           </div>
@@ -117,35 +131,32 @@ export default function ProductCard({ product, listView = false }: Props) {
     );
   }
 
-  // ==================== GRID VIEW (গর্জিয়াস ও কম্প্যাক্ট লুক) ====================
+  // ==================== GRID VIEW ====================
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-2.5 shadow-sm hover:shadow-md hover:border-gray-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full group relative">
-      
-      {/* 1. Image Area with Badges (Gap Reduced) */}
+
+      {/* 1. Image Area */}
       <div className="relative w-full aspect-square bg-gray-50/60 rounded-lg overflow-hidden mb-2">
-        {/* Discount Badge */}
         {discountPercent > 0 && (
           <span className="absolute top-1.5 left-1.5 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
             {discountPercent}% OFF
           </span>
         )}
-        
-        {/* Flash Sale Badge */}
+
         {product.isFlashSale && (
           <span className="absolute top-1.5 right-1.5 z-10 bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
             ⚡ SALE
           </span>
         )}
 
-        {/* Wishlist Button (Smooth Hover effect) */}
         <button className="absolute bottom-1.5 right-1.5 z-10 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-sm md:opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 cursor-pointer">
           <Heart size={13} className="text-gray-400 hover:text-red-500 transition-colors" />
         </button>
 
         <Link href={`/products/${product.slug}`} className="w-full h-full block relative p-1.5">
           <Image
-            src={product.images[0] || "https://placehold.co/400x400/2c2769/white?text=No+Image"}
-            alt={product.name}
+            src={productImage}
+            alt={productName}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
             className="object-contain p-1 group-hover:scale-102 transition-transform duration-300"
@@ -153,26 +164,22 @@ export default function ProductCard({ product, listView = false }: Props) {
         </Link>
       </div>
 
-      {/* 2. Product Metadata Content */}
+      {/* 2. Product Info */}
       <div className="flex flex-col flex-grow">
-        {/* Category Tag */}
         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">
           {product.category}
         </span>
 
-        {/* 2-Line Fixed Title (Height adjusted to h-9 for tighter fit) */}
         <Link href={`/products/${product.slug}`} className="block mb-1.5">
           <h3 className="text-xs font-bold text-gray-800 group-hover:text-[#2c2769] transition-colors line-clamp-2 h-9 leading-tight">
-            {product.name}
+            {productName}
           </h3>
         </Link>
 
-        {/* Star Ratings (Slightly Scaled Down for Premium Alignment) */}
         <div className="mb-2 scale-90 origin-left">
           <StarRating rating={product.rating} count={product.reviewCount} />
         </div>
 
-        {/* Pricing & Stock Grid Matrix */}
         <div className="mt-auto flex items-center justify-between gap-1 mb-2">
           <div className="flex items-baseline gap-1 flex-wrap">
             <span className="text-sm md:text-base font-black text-[#2c2769]">
@@ -185,7 +192,6 @@ export default function ProductCard({ product, listView = false }: Props) {
             )}
           </div>
 
-          {/* Conditional Stock Badges (Takes no unnecessary spacing) */}
           <div className="flex-shrink-0">
             {product.stock === 0 ? (
               <span className="text-[8px] font-extrabold text-gray-500 bg-gray-100 px-1 py-0.5 rounded">Out</span>
@@ -196,7 +202,7 @@ export default function ProductCard({ product, listView = false }: Props) {
         </div>
       </div>
 
-      {/* 3. Sleek Action Button */}
+      {/* 3. Add to Cart Button */}
       <button
         onClick={handleAddToCart}
         disabled={product.stock === 0}
