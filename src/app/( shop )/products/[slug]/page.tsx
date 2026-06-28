@@ -14,6 +14,17 @@ import StarRating from "@/components/ui/StarRating";
 import ProductCard from "@/components/product/ProductCard";
 import { useCartStore } from "@/store/cartStore";
 
+// Some image entries may come back as a plain string, or as an object like
+// { url: string }. This normalizes any entry into a plain string URL so it
+// can safely be passed to <Image src={...}> and cart items.
+function getImageUrl(img: unknown): string {
+  if (typeof img === "string") return img;
+  if (img && typeof img === "object" && "url" in img) {
+    return (img as { url: string }).url;
+  }
+  return "";
+}
+
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const router = useRouter();
@@ -38,6 +49,7 @@ export default function ProductDetailPage() {
       const res = await fetch(`/api/products/${slug}`);
       const data = await res.json();
       setProduct(data.product);
+      setSelectedImage(0);
 
       if (data.product?.category) {
         const relRes = await fetch(
@@ -55,12 +67,12 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
+
     addItem({
       _id: product._id,
       name: product.name,
       slug: product.slug,
-      image: product.images[0] || "",
+      image: getImageUrl(product.images[0]) || "",
       price: product.isFlashSale && product.flashSalePrice ? product.flashSalePrice : product.price,
       originalPrice: product.originalPrice,
       category: product.category,
@@ -109,14 +121,14 @@ export default function ProductDetailPage() {
     ((product.originalPrice - displayPrice) / product.originalPrice) * 100
   );
 
-  const images = product.images.length > 1
-    ? product.images
-    : [
-        product.images[0],
-        `https://placehold.co/400x400/39378c/white?text=${encodeURIComponent(product.name)}`,
-        `https://placehold.co/400x400/1a1a2e/white?text=${encodeURIComponent(product.brand || "Brand")}`,
-        `https://placehold.co/400x400/2c2769/white?text=View+2`,
-      ];
+  // FIX: Only fall back to a placeholder when there are truly NO images.
+  // Otherwise show exactly as many thumbnails as the product actually has —
+  // whether that's 1 or 10 — instead of padding with fake "Brand"/"View 2" images.
+  // Also normalize every entry to a plain string URL (handles both
+  // string[] and {url: string}[] shapes coming from the API).
+  const images: string[] = product.images.length > 0
+    ? product.images.map((img) => getImageUrl(img)).filter((url) => url !== "")
+    : [`https://placehold.co/400x400/39378c/white?text=${encodeURIComponent(product.name)}`];
 
   return (
     <div className="container-main py-6">
@@ -154,23 +166,25 @@ export default function ProductDetailPage() {
             />
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {images.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedImage(i)}
-                className={`flex-shrink-0 w-18 h-18 rounded-xl border-2 overflow-hidden transition-all ${
-                  selectedImage === i
-                    ? "border-[#2c2769] shadow-md"
-                    : "border-gray-200 hover:border-[#39378c]"
-                }`}
-              >
-                <div className="relative w-16 h-16">
-                  <Image src={img} alt={`View ${i + 1}`} fill className="object-contain p-1" />
-                </div>
-              </button>
-            ))}
-          </div>
+          {images.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={`flex-shrink-0 w-18 h-18 rounded-xl border-2 overflow-hidden transition-all ${
+                    selectedImage === i
+                      ? "border-[#2c2769] shadow-md"
+                      : "border-gray-200 hover:border-[#39378c]"
+                  }`}
+                >
+                  <div className="relative w-16 h-16">
+                    <Image src={img} alt={`View ${i + 1}`} fill className="object-contain p-1" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -303,7 +317,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Tags section has been completely removed from here to maintain a premium UI look */}
         </div>
       </div>
