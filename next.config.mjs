@@ -8,7 +8,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "mohasagor.com",
+        hostname: "mohasagor.com.bd",
       },
       {
         protocol: "https",
