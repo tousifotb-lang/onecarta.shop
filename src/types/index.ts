@@ -1,14 +1,14 @@
 export interface Product {
   _id: string;
   name: string;
-  title?: string;        // ✅ যোগ করুন
+  title?: string;
   slug: string;
   description: string;
   price: number;
   originalPrice: number;
-  discountPrice?: number; // ✅ যোগ করুন
+  discountPrice?: number;
   discount: number;
-  images: (string | { url: string })[];  // ✅ update করুন
+  images: (string | { url: string })[];
   category: string;
   brand: string;
   stock: number;
@@ -17,7 +17,7 @@ export interface Product {
   reviewCount: number;
   tags: string[];
   isActive: boolean;
-  status?: string;       // ✅ যোগ করুন
+  status?: string;
   isFeatured: boolean;
   isFlashSale: boolean;
   flashSalePrice?: number;
