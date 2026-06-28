@@ -12,7 +12,7 @@ export async function GET(
     
     const product = await Product.findOne({ 
       slug: slug, 
-      isActive: true 
+      status: "ACTIVE"   // ✅ isActive: true → status: "ACTIVE"
     }).lean();
 
     if (!product) {
