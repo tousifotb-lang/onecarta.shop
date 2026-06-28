@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get("maxPrice");
     const brand = searchParams.get("brand");
 
-    const query: Record<string, unknown> = { isActive: true };
+    const query: Record<string, unknown> = { isActive: "ACTIVE" };
 
     if (category) query.category = category;
     if (tag === "flash-sale") query.isFlashSale = true;
