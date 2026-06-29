@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, ShoppingCart, Check } from "lucide-react";
+import { ShoppingCart, Check } from "lucide-react";
 import { useState } from "react";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
+import WishlistButton from "@/components/WishlistButton"; // ✅ NEW
 
 interface Props {
   product: Product;
@@ -35,6 +36,19 @@ export default function ProductCard({ product, listView = false }: Props) {
     ? Math.round(((product.originalPrice - displayPrice) / product.originalPrice) * 100)
     : 0;
 
+  // ✅ WishlistButton এ pass করার জন্য একবার বানিয়ে নিলাম
+  const wishlistProduct = {
+    _id: product._id,
+    name: productName,
+    slug: product.slug,
+    image: productImage,
+    price: displayPrice,
+    originalPrice: product.originalPrice,
+    category: product.category,
+    brand: product.brand,
+    stock: product.stock,
+  };
+
   const handleAddToCart = () => {
     addItem({
       _id: product._id,
@@ -55,6 +69,8 @@ export default function ProductCard({ product, listView = false }: Props) {
   if (listView) {
     return (
       <div className="bg-white border border-gray-100 rounded-xl flex flex-row gap-3 p-2.5 shadow-sm hover:shadow-md transition-all group relative">
+
+        {/* Image */}
         <div className="relative flex-shrink-0 w-28 h-28 bg-gray-50/70 rounded-lg overflow-hidden">
           {discountPercent > 0 && (
             <span className="absolute top-1 left-1 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
@@ -72,6 +88,7 @@ export default function ProductCard({ product, listView = false }: Props) {
           </Link>
         </div>
 
+        {/* Info */}
         <div className="flex flex-col flex-1 justify-between py-0.5">
           <div>
             <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
@@ -104,16 +121,25 @@ export default function ProductCard({ product, listView = false }: Props) {
               ) : null}
             </div>
 
-            <button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0}
-              className={`flex items-center gap-1 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                added ? "bg-green-500" : "bg-[#2c2769] hover:bg-[#1f1b4d]"
-              }`}
-            >
-              {added ? <Check size={12} /> : <ShoppingCart size={12} />}
-              <span>{added ? "Added" : "Cart"}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* ✅ NEW: List View এ Wishlist button */}
+              <WishlistButton
+                product={wishlistProduct}
+                className="w-7 h-7 bg-gray-50 hover:bg-red-50 border border-gray-100 rounded-lg flex items-center justify-center"
+                size={13}
+              />
+
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={`flex items-center gap-1 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                  added ? "bg-green-500" : "bg-[#2c2769] hover:bg-[#1f1b4d]"
+                }`}
+              >
+                {added ? <Check size={12} /> : <ShoppingCart size={12} />}
+                <span>{added ? "Added" : "Cart"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -138,9 +164,12 @@ export default function ProductCard({ product, listView = false }: Props) {
           </span>
         )}
 
-        <button className="absolute bottom-1.5 right-1.5 z-10 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-sm md:opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 cursor-pointer">
-          <Heart size={13} className="text-gray-400 hover:text-red-500 transition-colors" />
-        </button>
+        {/* ✅ CHANGED: dummy Heart button → WishlistButton */}
+        <WishlistButton
+          product={wishlistProduct}
+          className="absolute bottom-1.5 right-1.5 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm md:opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50"
+          size={13}
+        />
 
         <Link href={`/products/${product.slug}`} className="w-full h-full block relative p-1.5">
           <Image
@@ -159,14 +188,11 @@ export default function ProductCard({ product, listView = false }: Props) {
           {product.category}
         </span>
 
-        {/* ✅ 2 line এর বেশি হলে ... দেখাবে */}
         <Link href={`/products/${product.slug}`} className="block mb-2">
           <h3 className="text-xs font-bold text-gray-800 group-hover:text-[#2c2769] transition-colors line-clamp-2 leading-tight">
             {productName}
           </h3>
         </Link>
-
-        {/* ✅ Star Rating সরানো হয়েছে */}
 
         <div className="mt-auto flex items-center justify-between gap-1 mb-2">
           <div className="flex items-baseline gap-1 flex-wrap">
@@ -190,7 +216,7 @@ export default function ProductCard({ product, listView = false }: Props) {
         </div>
       </div>
 
-      {/* Button */}
+      {/* Cart Button */}
       <button
         onClick={handleAddToCart}
         disabled={product.stock === 0}

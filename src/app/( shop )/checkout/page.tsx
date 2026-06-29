@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShieldCheck, Truck, CreditCard, Search, ChevronDown, Ticket, Percent, MapPin, Plus, X } from "lucide-react";
+import { ShieldCheck, Truck, CreditCard, Search, ChevronDown, Ticket, Percent, MapPin, Plus, Minus, X, Loader2 } from "lucide-react";
 
 interface SavedAddress {
   id: string;
@@ -89,7 +89,7 @@ const districtList = Object.keys(locationData).sort();
 export default function CheckoutPage() {
   const router = useRouter();
   
-  const { getCartItems } = useCartStore();
+  const { getCartItems, updateQuantity } = useCartStore();
   const items = getCartItems();
   
   const [mounted, setMounted] = useState(false);
@@ -130,9 +130,11 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponError, setCouponError] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
+  const reapplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getAddressKey = (email: string) => {
     return email ? `userAddresses_${email.trim().toLowerCase()}` : "userAddresses_guest";
@@ -207,20 +209,6 @@ export default function CheckoutPage() {
     );
   };
 
-  if (!mounted) {
-    return <div className="container-main py-20 text-center text-gray-500">Loading Checkout...</div>;
-  }
-
-  if (items.length === 0 && !isSubmitting) {
-    return (
-      <div className="container-main py-20 text-center">
-        <p className="text-5xl mb-4">🛒</p>
-        <h2 className="text-xl font-bold text-gray-700">Your cart is empty</h2>
-        <button onClick={() => router.push("/products")} className="mt-6 bg-[#2c2769] text-white px-5 py-2.5 rounded-xl text-sm font-bold">Return to Shop</button>
-      </div>
-    );
-  }
-
   // 🛠️ ফিক্সড লজিক: কোনো প্রোডাক্ট সিলেক্ট না থাকলে (`selectedItemIds.length === 0`) ডেলিভারি চার্জ ০ হবে ভাই
   const getDeliveryCharge = () => {
     if (selectedItemIds.length === 0) return 0;
@@ -237,22 +225,109 @@ export default function CheckoutPage() {
   const deliveryCharge = getDeliveryCharge();
   const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  // 🎫 FIX: Real coupon validation against the shared MongoDB `promocodes`
+  // collection (the same one the admin panel writes to), instead of the old
+  // hardcoded "ONECARTA20"/"FREESHIP" check. Also surfaces couponError in the UI.
+  // Shared by both the manual "Apply" click and the auto-revalidation effect below,
+  // so the discount always reflects the CURRENT subtotal/selection.
+  const validateCoupon = async (code: string, currentSubtotal: number, currentDeliveryCharge: number | null) => {
+    const res = await fetch("/api/promo-codes/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        subtotal: currentSubtotal,
+        deliveryCharge: currentDeliveryCharge ?? 0,
+      }),
+    });
+    return res.json() as Promise<{ valid: boolean; code?: string; discount?: number; error?: string }>;
+  };
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     setCouponError("");
     const code = couponCode.trim().toUpperCase();
-    if (!code) { setCouponError("Please enter a coupon code."); return; }
+    if (!code) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+    if (basePrice <= 0) {
+      setCouponError("Select at least one product before applying a coupon.");
+      return;
+    }
 
-    if (code === "ONECARTA20") {
-      setAppliedCoupon(code); setDiscount(200); setCouponCode("");
-    } else if (code === "FREESHIP" && deliveryCharge !== null) {
-      setAppliedCoupon(code); setDiscount(deliveryCharge); setCouponCode("");
-    } else {
-      setCouponError("Invalid coupon code.");
+    setIsApplyingCoupon(true);
+    try {
+      const data = await validateCoupon(code, basePrice, deliveryCharge);
+
+      if (data.valid && data.code && typeof data.discount === "number") {
+        setAppliedCoupon(data.code);
+        setDiscount(data.discount);
+        setCouponCode("");
+      } else {
+        setCouponError(data.error || "Invalid coupon code.");
+      }
+    } catch (err) {
+      setCouponError("Something went wrong while applying the coupon.");
+    } finally {
+      setIsApplyingCoupon(false);
     }
   };
 
-  const handleRemoveCoupon = () => { setAppliedCoupon(null); setDiscount(0); };
+  // 🛠️ FIX: Re-validate the applied coupon whenever the chargeable subtotal
+  // changes (item deselected, quantity changed). Previously the discount stayed
+  // frozen at its original value even after the subtotal dropped to ৳0 or below
+  // the coupon's minimum purchase requirement, letting Total go negative.
+  // IMPORTANT: this hook must run on every render (no early return above it),
+  // otherwise React sees a different number of hooks between renders.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    // No items selected at all — drop the discount immediately, no need to call the API.
+    if (basePrice <= 0) {
+      setAppliedCoupon(null);
+      setDiscount(0);
+      return;
+    }
+
+    if (reapplyTimerRef.current) clearTimeout(reapplyTimerRef.current);
+    reapplyTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await validateCoupon(appliedCoupon, basePrice, deliveryCharge);
+        if (data.valid && typeof data.discount === "number") {
+          setDiscount(data.discount);
+        } else {
+          // No longer eligible (e.g. dropped below min purchase) — remove it and tell the user why.
+          setAppliedCoupon(null);
+          setDiscount(0);
+          setCouponError(data.error || "Coupon removed — it no longer applies to your order.");
+        }
+      } catch {
+        // Network hiccup — leave the existing discount as-is rather than guessing.
+      }
+    }, 400);
+
+    return () => {
+      if (reapplyTimerRef.current) clearTimeout(reapplyTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [basePrice]);
+
+  if (!mounted) {
+    return <div className="container-main py-20 text-center text-gray-500">Loading Checkout...</div>;
+  }
+
+  if (items.length === 0 && !isSubmitting) {
+    return (
+      <div className="container-main py-20 text-center">
+        <p className="text-5xl mb-4">🛒</p>
+        <h2 className="text-xl font-bold text-gray-700">Your cart is empty</h2>
+        <button onClick={() => router.push("/products")} className="mt-6 bg-[#2c2769] text-white px-5 py-2.5 rounded-xl text-sm font-bold">Return to Shop</button>
+      </div>
+    );
+  }
+
+  const handleRemoveCoupon = () => { setAppliedCoupon(null); setDiscount(0); setCouponError(""); };
 
   const handleAddNewAddress = (e: React.FormEvent) => {
     e.preventDefault();
@@ -286,6 +361,7 @@ export default function CheckoutPage() {
       const orderData = {
         customer: { name: formData.name, phone: formattedPhone, fullAddress: `${formData.homeAddress}, ${formData.thana}, ${formData.district}` },
         items: selectedItems, paymentMethod, deliveryCharge, discountApplied: discount, totalAmount: grandTotal,
+        couponCode: appliedCoupon,
       };
       console.log("Submitting Order:", orderData);
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -334,7 +410,7 @@ export default function CheckoutPage() {
               )}
             </div>
           ) : (
-            /* 🛠️ ফিক্সড লজিক ২: নন-রেজিস্টার্ড (গেস্ট) ইউজারের জন্য সরাসরি ম্যানুয়াল ফর্মটি দেখাবে ভাই */
+            /* 🛠️ ফিক্সড লজিক ২: নন-রেজিস্টার্ড (গেস্ট) ইউজারের জন্য সরাসরি ম্যানুয়াল ফর্মটি দেখাবে ভাই */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
                 <Truck size={18} className="text-[#2c2769]" />
@@ -429,7 +505,24 @@ export default function CheckoutPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
-                      <p className="text-[10px] text-gray-400">Qty: {item.quantity}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                          className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer"
+                        >
+                          <Minus size={10} />
+                        </button>
+                        <span className="text-[10px] font-bold text-gray-700 min-w-[16px] text-center">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                          disabled={item.quantity >= item.stock}
+                          className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Plus size={10} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-gray-700 whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
@@ -438,12 +531,32 @@ export default function CheckoutPage() {
             </div>
 
             {/* 🎫 Coupon Section */}
-            <div className="border-t border-b border-gray-50 py-3 mb-3">
+            <div className="border-t border-b border-gray-50 py-3 mb-3 space-y-2">
               {!appliedCoupon ? (
-                <div className="flex bg-gray-50 border border-gray-200 focus-within:border-[#2c2769] rounded-xl overflow-hidden">
-                  <input type="text" placeholder="Coupon Code" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} className="w-full text-xs px-3 py-2 bg-transparent focus:outline-none uppercase font-bold" />
-                  <button type="button" onClick={handleApplyCoupon} className="bg-[#2c2769] text-white text-xs font-bold px-4 py-1.5 m-1 rounded-lg">Apply</button>
-                </div>
+                <>
+                  <div className="flex bg-gray-50 border border-gray-200 focus-within:border-[#2c2769] rounded-xl overflow-hidden">
+                    <input
+                      type="text"
+                      placeholder="Coupon Code"
+                      value={couponCode}
+                      onChange={(e) => { setCouponCode(e.target.value); if (couponError) setCouponError(""); }}
+                      disabled={isApplyingCoupon}
+                      className="w-full text-xs px-3 py-2 bg-transparent focus:outline-none uppercase font-bold disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={isApplyingCoupon}
+                      className="bg-[#2c2769] text-white text-xs font-bold px-4 py-1.5 m-1 rounded-lg flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {isApplyingCoupon && <Loader2 size={12} className="animate-spin" />}
+                      {isApplyingCoupon ? "Checking..." : "Apply"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-[11px] text-red-500 font-semibold px-1">{couponError}</p>
+                  )}
+                </>
               ) : (
                 <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-xs text-green-700 font-bold">
                   <span>Code {appliedCoupon} Applied!</span>
@@ -456,7 +569,7 @@ export default function CheckoutPage() {
             <div className="space-y-2 text-xs text-gray-600 mb-4">
               <div className="flex justify-between"><span>Subtotal (Selected)</span><span className="font-bold text-gray-800">{formatPrice(basePrice)}</span></div>
               {discount > 0 && <div className="flex justify-between text-green-600 font-bold"><span>Discount</span><span>-{formatPrice(discount)}</span></div>}
-              {/* 🛠️ ফিক্সড লজিক ৩: ডেলিভারি চার্জ ভ্যালু রিয়েল-টাইমে ০ অথবা জেলা অনুযায়ী আপডেট হবে ভাই */}
+              {/* 🛠️ ফিক্সড লজিক ৩: ডেলিভারি চার্জ ভ্যালু রিয়েল-টাইমে ০ অথবা জেলা অনুযায়ী আপডেট হবে ভাই */}
               <div className="flex justify-between">
                 <span>Delivery Charge</span>
                 {deliveryCharge !== null ? (
