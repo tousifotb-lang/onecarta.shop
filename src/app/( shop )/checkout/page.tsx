@@ -3,18 +3,21 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthModalStore } from "@/store/authModalStore";
 import { formatPrice } from "@/lib/utils";
-import { ShieldCheck, Truck, CreditCard, Search, ChevronDown, Ticket, Percent, MapPin, Plus, Minus, X, Loader2 } from "lucide-react";
+import { Truck, CreditCard, Search, ChevronDown, MapPin, Plus, Minus, X, Loader2 } from "lucide-react";
 
 interface SavedAddress {
-  id: string;
+  _id: string;
   label: string;
   name: string;
   phone: string;
   district: string;
   thana: string;
   homeAddress: string;
+  isDefault: boolean;
 }
 
 const locationData: Record<string, string[]> = {
@@ -88,15 +91,18 @@ const districtList = Object.keys(locationData).sort();
 
 export default function CheckoutPage() {
   const router = useRouter();
-  
-  const { getCartItems, updateQuantity } = useCartStore();
+  const { status } = useSession();
+  const { openModal } = useAuthModalStore();
+
+  const { getCartItems, updateQuantity, clearCart } = useCartStore();
   const items = getCartItems();
-  
+
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const isLoggedIn = status === "authenticated";
+
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedPresentAddress, setSelectedPresentAddress] = useState<string>("");
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
 
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -117,9 +123,10 @@ export default function CheckoutPage() {
     thana: "",
     homeAddress: "",
   });
-  
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [isSavingNewAddress, setIsSavingNewAddress] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [isDistrictOpen, setIsDistrictOpen] = useState(false);
   const [districtSearch, setDistrictSearch] = useState("");
@@ -136,39 +143,41 @@ export default function CheckoutPage() {
   const thanaRef = useRef<HTMLDivElement>(null);
   const reapplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getAddressKey = (email: string) => {
-    return email ? `userAddresses_${email.trim().toLowerCase()}` : "userAddresses_guest";
+  // লগইন থাকলে real backend থেকে saved address profile গুলো আনা হচ্ছে — localStorage না
+  const loadUserAddresses = async () => {
+    setLoadingAddresses(true);
+    try {
+      const res = await fetch("/api/users/me");
+      if (!res.ok) return;
+      const data = await res.json();
+      const addresses: SavedAddress[] = data.addresses || [];
+      setSavedAddresses(addresses);
+
+      const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+      if (defaultAddr) {
+        setSelectedPresentAddress(defaultAddr._id);
+        setFormData({
+          name: defaultAddr.name,
+          phone: defaultAddr.phone,
+          district: defaultAddr.district,
+          thana: defaultAddr.thana,
+          homeAddress: defaultAddr.homeAddress,
+        });
+      } else if (data.name || data.phone) {
+        setFormData((prev) => ({ ...prev, name: data.name || "", phone: data.phone || "" }));
+      }
+    } catch (err) {
+      console.error("Failed to load saved addresses:", err);
+    } finally {
+      setLoadingAddresses(false);
+    }
   };
 
   useEffect(() => {
     setMounted(true);
-    
-    const loggedInStatus = localStorage.getItem("isLoggedIn") === "true";
-    const email = localStorage.getItem("userEmail") || "";
-    setIsLoggedIn(loggedInStatus);
-    setUserEmail(email);
-
-    if (loggedInStatus && email) {
-      const targetKey = getAddressKey(email);
-      const storedAddresses = localStorage.getItem(targetKey);
-      if (storedAddresses) {
-        const parsed = JSON.parse(storedAddresses);
-        setSavedAddresses(parsed);
-        if (parsed.length > 0) {
-          setSelectedPresentAddress(parsed[0].id);
-          setFormData({
-            name: parsed[0].name,
-            phone: parsed[0].phone,
-            district: parsed[0].district,
-            thana: parsed[0].thana,
-            homeAddress: parsed[0].homeAddress,
-          });
-        }
-      }
-    }
 
     if (items.length > 0) {
-      setSelectedItemIds(items.map(i => i._id));
+      setSelectedItemIds(items.map((i) => i._id));
     }
 
     const footerElement = document.querySelector("footer");
@@ -185,9 +194,15 @@ export default function CheckoutPage() {
     };
   }, [items.length]);
 
+  useEffect(() => {
+    if (status === "authenticated") {
+      loadUserAddresses();
+    }
+  }, [status]);
+
   const handleAddressSelect = (addrId: string) => {
     setSelectedPresentAddress(addrId);
-    const activeAddr = savedAddresses.find(a => a.id === addrId);
+    const activeAddr = savedAddresses.find((a) => a._id === addrId);
     if (activeAddr) {
       setFormData({
         name: activeAddr.name,
@@ -200,16 +215,15 @@ export default function CheckoutPage() {
   };
 
   const handleFieldChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleToggleItemSelection = (id: string) => {
-    setSelectedItemIds(prev => 
-      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+    setSelectedItemIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
   };
 
-  // 🛠️ ফিক্সড লজিক: কোনো প্রোডাক্ট সিলেক্ট না থাকলে (`selectedItemIds.length === 0`) ডেলিভারি চার্জ ০ হবে ভাই
   const getDeliveryCharge = () => {
     if (selectedItemIds.length === 0) return 0;
     if (!formData.district || !formData.thana) return null;
@@ -220,16 +234,11 @@ export default function CheckoutPage() {
     return 120;
   };
 
-  const selectedItems = items.filter(item => selectedItemIds.includes(item._id));
-  const basePrice = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const selectedItems = items.filter((item) => selectedItemIds.includes(item._id));
+  const basePrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryCharge = getDeliveryCharge();
   const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
-  // 🎫 FIX: Real coupon validation against the shared MongoDB `promocodes`
-  // collection (the same one the admin panel writes to), instead of the old
-  // hardcoded "ONECARTA20"/"FREESHIP" check. Also surfaces couponError in the UI.
-  // Shared by both the manual "Apply" click and the auto-revalidation effect below,
-  // so the discount always reflects the CURRENT subtotal/selection.
   const validateCoupon = async (code: string, currentSubtotal: number, currentDeliveryCharge: number | null) => {
     const res = await fetch("/api/promo-codes/validate", {
       method: "POST",
@@ -259,7 +268,6 @@ export default function CheckoutPage() {
     setIsApplyingCoupon(true);
     try {
       const data = await validateCoupon(code, basePrice, deliveryCharge);
-
       if (data.valid && data.code && typeof data.discount === "number") {
         setAppliedCoupon(data.code);
         setDiscount(data.discount);
@@ -274,16 +282,9 @@ export default function CheckoutPage() {
     }
   };
 
-  // 🛠️ FIX: Re-validate the applied coupon whenever the chargeable subtotal
-  // changes (item deselected, quantity changed). Previously the discount stayed
-  // frozen at its original value even after the subtotal dropped to ৳0 or below
-  // the coupon's minimum purchase requirement, letting Total go negative.
-  // IMPORTANT: this hook must run on every render (no early return above it),
-  // otherwise React sees a different number of hooks between renders.
   useEffect(() => {
     if (!appliedCoupon) return;
 
-    // No items selected at all — drop the discount immediately, no need to call the API.
     if (basePrice <= 0) {
       setAppliedCoupon(null);
       setDiscount(0);
@@ -297,13 +298,12 @@ export default function CheckoutPage() {
         if (data.valid && typeof data.discount === "number") {
           setDiscount(data.discount);
         } else {
-          // No longer eligible (e.g. dropped below min purchase) — remove it and tell the user why.
           setAppliedCoupon(null);
           setDiscount(0);
           setCouponError(data.error || "Coupon removed — it no longer applies to your order.");
         }
       } catch {
-        // Network hiccup — leave the existing discount as-is rather than guessing.
+        // network hiccup — discount আগের মতই রেখে দেওয়া হলো
       }
     }, 400);
 
@@ -313,7 +313,7 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePrice]);
 
-  if (!mounted) {
+  if (!mounted || status === "loading") {
     return <div className="container-main py-20 text-center text-gray-500">Loading Checkout...</div>;
   }
 
@@ -327,46 +327,96 @@ export default function CheckoutPage() {
     );
   }
 
-  const handleRemoveCoupon = () => { setAppliedCoupon(null); setDiscount(0); setCouponError(""); };
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscount(0);
+    setCouponError("");
+  };
 
-  const handleAddNewAddress = (e: React.FormEvent) => {
+  const handleAddNewAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddressForm.name || !newAddressForm.phone || !newAddressForm.district || !newAddressForm.thana || !newAddressForm.homeAddress) return;
 
-    const newAddrItem: SavedAddress = {
-      id: `addr_${Date.now()}`, label: newAddressForm.label, name: newAddressForm.name, phone: newAddressForm.phone,
-      district: newAddressForm.district, thana: newAddressForm.thana, homeAddress: newAddressForm.homeAddress,
-    };
+    setIsSavingNewAddress(true);
+    try {
+      const res = await fetch("/api/users/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAddressForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Address save failed");
 
-    const targetKey = getAddressKey(userEmail);
-    const updated = [...savedAddresses, newAddrItem];
-    setSavedAddresses(updated);
-    if (isLoggedIn && userEmail) localStorage.setItem(targetKey, JSON.stringify(updated));
+      setSavedAddresses(data);
+      const justAdded = data[data.length - 1];
+      if (justAdded) {
+        setSelectedPresentAddress(justAdded._id);
+        setFormData({
+          name: justAdded.name,
+          phone: justAdded.phone,
+          district: justAdded.district,
+          thana: justAdded.thana,
+          homeAddress: justAdded.homeAddress,
+        });
+      }
 
-    setSelectedPresentAddress(newAddrItem.id);
-    setFormData({ name: newAddrItem.name, phone: newAddrItem.phone, district: newAddrItem.district, thana: newAddrItem.thana, homeAddress: newAddrItem.homeAddress });
-    setIsAddressModalOpen(false);
-    setNewAddressForm({ label: "Home", name: "", phone: "", district: "", thana: "", homeAddress: "" });
+      setIsAddressModalOpen(false);
+      setNewAddressForm({ label: "Home", name: "", phone: "", district: "", thana: "", homeAddress: "" });
+    } catch (err: any) {
+      alert(err.message || "Address save করতে সমস্যা হয়েছে।");
+    } finally {
+      setIsSavingNewAddress(false);
+    }
   };
 
   const handleSubmitOrder = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (selectedItemIds.length === 0) { alert("Please select at least one product."); return; }
-    if (!formData.name.trim() || !formData.phone || !formData.district || !formData.thana || !formData.homeAddress.trim()) { alert("Please complete address details."); return; }
+    setSubmitError("");
+
+    if (selectedItemIds.length === 0) {
+      setSubmitError("Please select at least one product.");
+      return;
+    }
+    if (!formData.name.trim() || !formData.phone || !formData.district || !formData.thana || !formData.homeAddress.trim()) {
+      setSubmitError("Please complete address details.");
+      return;
+    }
 
     setIsSubmitting(true);
-    const formattedPhone = formData.phone.startsWith("0") ? `+88${formData.phone}` : `+880${formData.phone}`;
 
     try {
-      const orderData = {
-        customer: { name: formData.name, phone: formattedPhone, fullAddress: `${formData.homeAddress}, ${formData.thana}, ${formData.district}` },
-        items: selectedItems, paymentMethod, deliveryCharge, discountApplied: discount, totalAmount: grandTotal,
+      const payload = {
+        customerName: formData.name,
+        // ⚠️ raw 11-digit phone — User model এর phone field এর সাথে format consistent রাখা
+        // হচ্ছে, যাতে dashboard এর phone-matching ঠিকভাবে কাজ করে
+        customerPhone: formData.phone,
+        customerAddress: `${formData.homeAddress}, ${formData.thana}, ${formData.district}`,
+        items: selectedItems.map((item) => ({
+          productId: item._id,
+          name: item.name,
+          qty: item.quantity,
+          unitPrice: item.price,
+        })),
+        deliveryCharge: deliveryCharge || 0,
+        discountAmount: discount,
         couponCode: appliedCoupon,
       };
-      console.log("Submitting Order:", orderData);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.push("/order-success"); 
-    } catch (error) { setIsSubmitting(false); }
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Order placement failed");
+
+      clearCart?.();
+      router.push("/order-success");
+    } catch (err: any) {
+      setSubmitError(err.message || "Something went wrong while placing your order.");
+      setIsSubmitting(false);
+    }
   };
 
   const filteredDistricts = districtList.filter((d) => d.toLowerCase().includes(districtSearch.toLowerCase()));
@@ -376,12 +426,16 @@ export default function CheckoutPage() {
     <div className="container-main py-6 pb-24 md:pb-8">
       <h1 className="text-2xl font-extrabold text-gray-900 mb-6">Checkout</h1>
 
+      {submitError && (
+        <div className="mb-4 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold p-3 rounded-xl">
+          {submitError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
-        {/* Left Forms */}
+
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* 🛠️ ফিক্সড লজিক ১: রেজিস্টার্ড ইউজারের জন্য শুধু এই সেভ করা অ্যাড্রেস বক্সটি দেখাবে ভাই */}
+
           {isLoggedIn ? (
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-gray-50">
@@ -392,11 +446,15 @@ export default function CheckoutPage() {
                 <button type="button" onClick={() => setIsAddressModalOpen(true)} className="p-1.5 bg-[#eeedf5] text-[#2c2769] hover:bg-[#2c2769] hover:text-white rounded-lg transition-all"><Plus size={16} /></button>
               </div>
 
-              {savedAddresses.length > 0 ? (
+              {loadingAddresses ? (
+                <div className="text-xs text-gray-400 font-semibold p-4 text-center flex items-center justify-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Loading addresses...
+                </div>
+              ) : savedAddresses.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2.5">
                   {savedAddresses.map((addr) => (
-                    <label key={addr.id} className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${selectedPresentAddress === addr.id ? "border-[#2c2769] bg-[#eeedf5]/20" : "border-gray-100 bg-gray-50/30 hover:bg-gray-50/80"}`}>
-                      <input type="radio" name="presentAddress" value={addr.id} checked={selectedPresentAddress === addr.id} onChange={() => handleAddressSelect(addr.id)} className="mt-0.5 accent-[#2c2769]" />
+                    <label key={addr._id} className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${selectedPresentAddress === addr._id ? "border-[#2c2769] bg-[#eeedf5]/20" : "border-gray-100 bg-gray-50/30 hover:bg-gray-50/80"}`}>
+                      <input type="radio" name="presentAddress" value={addr._id} checked={selectedPresentAddress === addr._id} onChange={() => handleAddressSelect(addr._id)} className="mt-0.5 accent-[#2c2769]" />
                       <div className="text-xs space-y-0.5">
                         <span className="bg-[#2c2769] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase mb-1 inline-block">{addr.label}</span>
                         <p className="font-bold text-gray-800">{addr.name} — <span className="text-gray-500">{addr.phone}</span></p>
@@ -410,13 +468,17 @@ export default function CheckoutPage() {
               )}
             </div>
           ) : (
-            /* 🛠️ ফিক্সড লজিক ২: নন-রেজিস্টার্ড (গেস্ট) ইউজারের জন্য সরাসরি ম্যানুয়াল ফর্মটি দেখাবে ভাই */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
                 <Truck size={18} className="text-[#2c2769]" />
                 <span>Shipping Address Details</span>
               </h2>
-              
+
+              <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold p-3 rounded-xl flex items-center justify-between gap-3">
+                <span>Have an account? Sign in to use your saved addresses.</span>
+                <button type="button" onClick={openModal} className="font-black underline shrink-0">Sign In</button>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-600 uppercase">Full Name *</label>
@@ -446,8 +508,8 @@ export default function CheckoutPage() {
                         <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                       </div>
                       <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                        {districtList.filter(d => d.toLowerCase().includes(districtSearch.toLowerCase())).map(d => (
-                          <div key={d} onClick={() => { handleFieldChange("district", d); setFormData(p => ({ ...p, district: d, thana: "" })); setIsDistrictOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{d}</div>
+                        {filteredDistricts.map((d) => (
+                          <div key={d} onClick={() => { setFormData((p) => ({ ...p, district: d, thana: "" })); setIsDistrictOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{d}</div>
                         ))}
                       </div>
                     </div>
@@ -467,7 +529,7 @@ export default function CheckoutPage() {
                         <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={thanaSearch} onChange={(e) => setThanaSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                       </div>
                       <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                        {(locationData[formData.district] || []).filter(t => t.toLowerCase().includes(thanaSearch.toLowerCase())).map(t => (
+                        {filteredThanas.map((t) => (
                           <div key={t} onClick={() => { handleFieldChange("thana", t); setIsThanaOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{t}</div>
                         ))}
                       </div>
@@ -483,18 +545,16 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* 💳 Payment Method */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
             <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50"><CreditCard size={18} className="text-[#2c2769]" /><span>Payment Method</span></h2>
             <label className="flex items-center justify-between p-3.5 border border-[#2c2769] bg-[#eeedf5]/10 rounded-xl cursor-pointer"><div className="flex items-center gap-3"><input type="radio" checked readOnly className="accent-[#2c2769]" /><div><p className="text-xs font-bold text-gray-800">Cash on Delivery (COD)</p><p className="text-[11px] text-gray-400">Pay with cash upon package receipt.</p></div></div></label>
           </div>
         </div>
 
-        {/* Right Sidebar */}
         <div className="space-y-6">
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
             <h2 className="text-base font-bold text-gray-800 pb-2 border-b border-gray-50 mb-3">Cart Products</h2>
-            
+
             <div className="divide-y divide-gray-50 max-h-60 overflow-y-auto pr-1 space-y-2 mb-3">
               {items.map((item) => (
                 <div key={item._id} className="flex items-center justify-between py-2.5 gap-2">
@@ -530,7 +590,6 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {/* 🎫 Coupon Section */}
             <div className="border-t border-b border-gray-50 py-3 mb-3 space-y-2">
               {!appliedCoupon ? (
                 <>
@@ -565,11 +624,9 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Order Summaries */}
             <div className="space-y-2 text-xs text-gray-600 mb-4">
               <div className="flex justify-between"><span>Subtotal (Selected)</span><span className="font-bold text-gray-800">{formatPrice(basePrice)}</span></div>
               {discount > 0 && <div className="flex justify-between text-green-600 font-bold"><span>Discount</span><span>-{formatPrice(discount)}</span></div>}
-              {/* 🛠️ ফিক্সড লজিক ৩: ডেলিভারি চার্জ ভ্যালু রিয়েল-টাইমে ০ অথবা জেলা অনুযায়ী আপডেট হবে ভাই */}
               <div className="flex justify-between">
                 <span>Delivery Charge</span>
                 {deliveryCharge !== null ? (
@@ -588,7 +645,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* 📱 Mobile Fixed Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl p-3 z-[99999] flex items-center justify-between gap-4">
         <div className="flex flex-col">
           <span className="text-[10px] text-gray-400 font-bold uppercase">Grand Total</span>
@@ -599,7 +655,6 @@ export default function CheckoutPage() {
         </button>
       </div>
 
-      {/* ➕ Add New Address Modal */}
       {isAddressModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[999999]">
           <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -608,15 +663,18 @@ export default function CheckoutPage() {
               <button onClick={() => setIsAddressModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <form onSubmit={handleAddNewAddress} className="space-y-3 text-xs">
-              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Address Label</label><input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.label} onChange={(e) => setNewAddressForm(p => ({ ...p, label: e.target.value }))} required /></div>
-              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Full Name</label><input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.name} onChange={(e) => setNewAddressForm(p => ({ ...p, name: e.target.value }))} required /></div>
-              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Phone Number</label><input type="tel" className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.phone} onChange={(e) => setNewAddressForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, "") }))} required /></div>
+              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Address Label</label><input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.label} onChange={(e) => setNewAddressForm((p) => ({ ...p, label: e.target.value }))} required /></div>
+              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Full Name</label><input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.name} onChange={(e) => setNewAddressForm((p) => ({ ...p, name: e.target.value }))} required /></div>
+              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Phone Number</label><input type="tel" maxLength={11} className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.phone} onChange={(e) => setNewAddressForm((p) => ({ ...p, phone: e.target.value.replace(/\D/g, "") }))} required /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">District</label><select className="w-full p-2.5 border border-gray-200 rounded-xl bg-white" value={newAddressForm.district} onChange={(e) => setNewAddressForm(p => ({ ...p, district: e.target.value, thana: "" }))} required><option value="">Select</option>{districtList.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
-                <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Thana</label><select className="w-full p-2.5 border border-gray-200 rounded-xl bg-white" value={newAddressForm.thana} onChange={(e) => setNewAddressForm(p => ({ ...p, thana: e.target.value }))} disabled={!newAddressForm.district} required><option value="">Select</option>{(locationData[newAddressForm.district] || []).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">District</label><select className="w-full p-2.5 border border-gray-200 rounded-xl bg-white" value={newAddressForm.district} onChange={(e) => setNewAddressForm((p) => ({ ...p, district: e.target.value, thana: "" }))} required><option value="">Select</option>{districtList.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
+                <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Thana</label><select className="w-full p-2.5 border border-gray-200 rounded-xl bg-white" value={newAddressForm.thana} onChange={(e) => setNewAddressForm((p) => ({ ...p, thana: e.target.value }))} disabled={!newAddressForm.district} required><option value="">Select</option>{(locationData[newAddressForm.district] || []).map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
               </div>
-              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Detailed Address</label><textarea rows={2} className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.homeAddress} onChange={(e) => setNewAddressForm(p => ({ ...p, homeAddress: e.target.value }))} required /></div>
-              <button type="submit" className="w-full bg-[#2c2769] text-white py-2.5 rounded-xl font-bold text-xs mt-2">Save Address Profile</button>
+              <div className="space-y-1"><label className="font-bold text-gray-600 uppercase">Detailed Address</label><textarea rows={2} className="w-full p-2.5 border border-gray-200 rounded-xl outline-none" value={newAddressForm.homeAddress} onChange={(e) => setNewAddressForm((p) => ({ ...p, homeAddress: e.target.value }))} required /></div>
+              <button type="submit" disabled={isSavingNewAddress} className="w-full bg-[#2c2769] text-white py-2.5 rounded-xl font-bold text-xs mt-2 disabled:opacity-60 flex items-center justify-center gap-2">
+                {isSavingNewAddress && <Loader2 size={14} className="animate-spin" />}
+                {isSavingNewAddress ? "Saving..." : "Save Address Profile"}
+              </button>
             </form>
           </div>
         </div>

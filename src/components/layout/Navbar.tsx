@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   ShoppingCart, Heart, User, Menu, X,
   Gift, BookOpen, CreditCard, Store, Package, Phone,
   ChevronDown, Settings, LogOut, LayoutDashboard, ChevronRight, Home, Info, HelpCircle
 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
-import { useWishlistStore } from "@/store/wishlistStore";           // ✅ NEW
-import { useAuthModalStore } from "@/store/authModalStore";         // ✅ NEW
+import { useWishlistStore } from "@/store/wishlistStore";
+import { useAuthModalStore } from "@/store/authModalStore";
 import CartDrawer from "@/components/cart/CartDrawer";
 import SearchBar from "./SearchBar";
 import LoginModal from "@/components/auth/LoginModal";
@@ -159,17 +160,26 @@ const categoriesData = [
 export default function Navbar() {
   const router = useRouter();
 
+  // ── Auth Session (NextAuth) ──────────────────────────────────────────────
+  const { data: session, status } = useSession();
+
   // ── Cart ──────────────────────────────────────────────────────────────────
   const { getCartItems } = useCartStore();
   const currentCartItems = getCartItems();
   const totalItems = currentCartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   // ── Wishlist ──────────────────────────────────────────────────────────────
-  const { getWishlistItems } = useWishlistStore();                  // ✅ NEW
+  const { getWishlistItems, fetchWishlist, clearWishlist } = useWishlistStore();
 
+useEffect(() => {
+  if (status === "authenticated") {
+    fetchWishlist();
+  } else if (status === "unauthenticated") {
+    clearWishlist();
+  }
+}, [status]);
   // ── Auth Modal (global) ───────────────────────────────────────────────────
-  const { isOpen: isAuthModalOpen, openModal, closeModal } = useAuthModalStore(); // ✅ NEW
-  // ❌ REMOVED: const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { isOpen: isAuthModalOpen, openModal, closeModal } = useAuthModalStore();
 
   // ── Local UI state ────────────────────────────────────────────────────────
   const [mounted, setMounted] = useState(false);
@@ -182,24 +192,20 @@ export default function Navbar() {
   const [cartOpen, setCartOpen] = useState(false);
   const [isAnimate, setIsAnimate] = useState(false);
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [userName, setUserName] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // ── Mobile accordion state ────────────────────────────────────────────────
   const [openMobileMainSlug, setOpenMobileMainSlug] = useState<string | null>(null);
   const [openMobileSubSlug, setOpenMobileSubSlug] = useState<string | null>(null);
 
+  // ── Derived auth state (NextAuth session থেকে — localStorage না) ─────────
+  const isLoggedIn = mounted && status === "authenticated";
+  const userName = session?.user?.name || "Customer";
+
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
-    const userSession = localStorage.getItem("isLoggedIn");
-    const storedName = localStorage.getItem("userName");
-    if (userSession === "true") {
-      setIsLoggedIn(true);
-      setUserName(storedName && storedName !== "undefined" && storedName !== "User" ? storedName : "Tousif");
-    }
   }, []);
 
   useEffect(() => {
@@ -220,7 +226,7 @@ export default function Navbar() {
   }, [totalItems]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const wishlistCount = mounted ? getWishlistItems().length : 0;   // ✅ NEW
+  const wishlistCount = mounted ? getWishlistItems().length : 0;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleCategoryHover = (cat: any) => {
@@ -229,11 +235,8 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userName");
-    setIsLoggedIn(false);
     setIsDropdownOpen(false);
-    window.location.href = "/";
+    signOut({ callbackUrl: "/" });
   };
 
   const toggleMobileMain = (slug: string) => {
@@ -301,7 +304,6 @@ export default function Navbar() {
               >
                 <Heart size={20} className="w-[19px] h-[19px] sm:w-4 sm:h-4" />
                 <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
-                {/* ✅ NEW: wishlist count badge */}
                 {mounted && wishlistCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {wishlistCount}
@@ -324,7 +326,6 @@ export default function Navbar() {
               {/* Account Button — desktop only */}
               <div className="hidden md:block">
                 {!isLoggedIn ? (
-                  // ✅ CHANGED: setIsAuthModalOpen(true) → openModal()
                   <button
                     onClick={openModal}
                     className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
@@ -614,7 +615,6 @@ export default function Navbar() {
             <span className="absolute top-0 right-1 bg-red-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">{totalItems}</span>
           )}
         </button>
-        {/* ✅ CHANGED: setIsAuthModalOpen(true) → openModal() */}
         <button
           onClick={() => { if (isLoggedIn) { router.push("/dashboard"); } else { openModal(); } }}
           className="flex flex-col items-center justify-center text-[#a8a6d9] hover:text-white transition-colors"
@@ -626,7 +626,6 @@ export default function Navbar() {
       {/* Cart Drawer */}
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
 
-      {/* ✅ CHANGED: onClose={closeModal} (global store থেকে) */}
       <LoginModal isOpen={isAuthModalOpen} onClose={closeModal} />
 
     </header>

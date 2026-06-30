@@ -1,5 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IAddress {
+  _id?: mongoose.Types.ObjectId;
+  label: string;
+  name: string;
+  phone: string;
+  district: string;
+  thana: string;
+  homeAddress: string;
+  isDefault: boolean;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -7,16 +18,25 @@ export interface IUser extends Document {
   phone?: string;
   avatar?: string;
   role: "user" | "admin";
-  addresses: {
-    label: string;
-    address: string;
-    city: string;
-    district: string;
-    phone: string;
-    isDefault: boolean;
-  }[];
+  dob?: string;
+  gender?: string;
+  addresses: IAddress[];
+  wishlist: mongoose.Types.ObjectId[];
   isActive: boolean;
 }
+
+const AddressSchema = new Schema<IAddress>(
+  {
+    label: { type: String, default: "Home" },
+    name: { type: String, required: true },
+    phone: { type: String, required: true },
+    district: { type: String, required: true },
+    thana: { type: String, required: true },
+    homeAddress: { type: String, required: true },
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: true }
+);
 
 const UserSchema = new Schema<IUser>(
   {
@@ -26,20 +46,13 @@ const UserSchema = new Schema<IUser>(
     phone: { type: String },
     avatar: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    addresses: [
-      {
-        label: String,
-        address: String,
-        city: String,
-        district: String,
-        phone: String,
-        isDefault: { type: Boolean, default: false },
-      },
-    ],
+    dob: { type: String },
+    gender: { type: String, enum: ["Male", "Female", "Others", ""], default: "" },
+    addresses: [AddressSchema],
+    wishlist: [{ type: Schema.Types.ObjectId, ref: "Product" }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.models.User ||
-  mongoose.model<IUser>("User", UserSchema);
+export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

@@ -26,11 +26,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Your account is deactivated." }, { status: 403 });
     }
 
-    // ভেরিফাইড ডাটা ফ্রন্টএন্ডে পাঠানো
     return NextResponse.json({
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      phone: user.phone || "",
       role: user.role,
     });
   } catch (error: any) {

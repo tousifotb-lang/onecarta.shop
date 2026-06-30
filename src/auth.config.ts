@@ -1,21 +1,32 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
-  providers: [], // এটা খালি থাকবে, রাউটে আমরা প্রোভাইডার জুড়ব
+  providers: [], // Edge runtime এ bcrypt/mongoose থাকবে না, তাই providers এখানে খালি
+  pages: {
+    signIn: "/login",
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.id = (user as any).id;
         token.role = (user as any).role;
-        token.id = user.id;
+        token.phone = (user as any).phone;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
+        (session.user as any).phone = token.phone;
       }
       return session;
+    },
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
+      if (isOnDashboard) return isLoggedIn;
+      return true;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

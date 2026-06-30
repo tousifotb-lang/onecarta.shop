@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { signIn } from "next-auth/react";
 import { Mail, Lock, User, ArrowRight, X, CheckCircle, Phone } from "lucide-react";
 
 interface LoginModalProps {
@@ -11,12 +12,11 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
-  
-  // Form States
+
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState(""); 
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState(""); 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     };
   }, [isOpen, onClose]);
 
-  // Reset all input fields on close
   useEffect(() => {
     if (!isOpen) {
       const timer = setTimeout(() => {
@@ -54,10 +53,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   if (!isOpen) return null;
 
-  // Real-time Phone Validation Styles (Must start with 0)
   const isPhoneInvalid = !isLogin && phone.length > 0 && !phone.startsWith("0");
 
-  // Real-time Email Validation Styles
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const bdFullPhoneRegex = /^01[1-9]\d{8}$/;
 
@@ -65,7 +62,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (!isLogin || email.trim().length === 0) return false;
     const input = email.trim();
     const isNumeric = /^[+]?[\d]*$/.test(input.replace(/[\s-]/g, ""));
-    
+
     if (isNumeric) {
       if (input.length > 2 && !input.startsWith("0")) return true;
       if (input.length === 11 && !bdFullPhoneRegex.test(input)) return true;
@@ -81,7 +78,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const getPasswordStrength = () => {
     if (!password) return { label: "", color: "bg-gray-200", textColor: "text-gray-400", width: "w-0" };
-    
+
     let score = 0;
     if (password.length >= 6) score++;
     if (password.length >= 8) score++;
@@ -108,7 +105,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value.replace(/\D/g, ""); 
+    const inputValue = e.target.value.replace(/\D/g, "");
     if (inputValue.length <= 11) {
       setPhone(inputValue);
     }
@@ -136,26 +133,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setLoading(true);
 
     if (isLogin) {
-      // 🔐 Login Flow
+      // 🔐 Login Flow — real backend verification + NextAuth session creation
       try {
         let loginPayload = email.trim().toLowerCase();
         const cleanedPayload = loginPayload.replace(/[\s-]/g, "");
         const isNumeric = /^[+]?[\d]*$/.test(cleanedPayload);
-
-        // 👑 [HARDCODED MASTER ADMIN GATEWAY] — তৌসিফ ভাইয়ের স্পেশাল অ্যাডমিন সিকিউরিটি চেক
-        if (loginPayload === "admin@onecarta.shop" && password === "AdminOnecarta513@") {
-          localStorage.setItem("isLoggedIn", "true"); 
-          localStorage.setItem("userName", "Tousif (Admin)"); 
-          localStorage.setItem("userEmail", "admin@onecarta.shop"); 
-          localStorage.setItem("userRole", "Admin"); // অ্যাডমিন প্যানেল এবং নেভবার আনলকিং রিং
-
-          setLoading(false);
-          onClose();
-          
-          // সরাসরি অ্যাডমিন কন্ট্রোল প্যানেলে পুশ করে নিয়ে যাবে
-          setTimeout(() => { window.location.href = "/admin/dashboard"; }, 100);
-          return;
-        }
 
         if (isNumeric) {
           if (cleanedPayload.startsWith("1") && cleanedPayload.length === 10) {
@@ -196,14 +178,22 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           return;
         }
 
-        localStorage.setItem("isLoggedIn", "true"); 
-        localStorage.setItem("userName", userData.user?.name || userData.name || "Customer"); 
-        localStorage.setItem("userEmail", userData.user?.email || userData.email || loginPayload || "Not Provided"); 
-        localStorage.setItem("userRole", "User"); // সাধারণ কাস্টমার ট্যাগ
+        // ✅ এখানেই আসল session তৈরি হচ্ছে — localStorage এর বদলে NextAuth credentials provider দিয়ে
+        const result = await signIn("credentials", {
+          userObject: JSON.stringify(userData),
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Session creation failed. Please try again.");
+          setLoading(false);
+          return;
+        }
 
         setLoading(false);
         onClose();
-        
+
+        // Hard redirect — যাতে SessionProvider fresh session fetch করতে বাধ্য হয়
         setTimeout(() => { window.location.href = "/dashboard"; }, 100);
       } catch (err) {
         setError("Something went wrong. Please try again.");
@@ -216,15 +206,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         const fullName = lastName.trim() ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim();
         const isEmailEmpty = !email.trim();
         const finalEmail = !isEmailEmpty ? email.trim().toLowerCase() : `${cleanedPhone}@onecarta.com`;
-        
+
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             name: fullName,
             phone: cleanedPhone,
             email: finalEmail,
-            password 
+            password
           }),
         });
 
@@ -241,7 +231,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         }
 
         setLoading(false);
-        setIsRegistered(true); 
+        setIsRegistered(true);
       } catch (err) {
         setError("Something went wrong with the server. Please try again.");
         setLoading(false);
@@ -251,19 +241,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      {/* Modal Box */}
       <div className="relative w-full max-w-md bg-white border border-gray-100 rounded-3xl p-8 shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Close Button */}
+
         <button onClick={onClose} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors cursor-pointer">
           <X size={18} />
         </button>
 
         {isRegistered ? (
-          /* Success Screen */
           <div className="text-center py-6 animate-in fade-in zoom-in-95 duration-300">
             <div className="flex justify-center mb-4 text-green-500">
               <CheckCircle size={56} className="animate-bounce" />
@@ -272,13 +258,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <p className="text-sm text-gray-500 mt-2 px-4">
               Your account has been successfully created. Please click below to sign in.
             </p>
-            
+
             <div className="mt-8">
               <button
                 onClick={() => {
                   setIsRegistered(false);
                   setIsLogin(true);
-                  setPassword(""); 
+                  setPassword("");
                 }}
                 className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
@@ -288,15 +274,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </div>
           </div>
         ) : (
-          /* Form Content */
           <>
-            {/* Logo and Header Section */}
             <div className="text-center mb-8">
               <div className="inline-block mb-3">
-                <img 
-                  src="/logo/logo2.png" 
-                  alt="onecarta logo" 
-                  className="h-9 w-auto object-contain mx-auto" 
+                <img
+                  src="/logo/logo2.png"
+                  alt="onecarta logo"
+                  className="h-9 w-auto object-contain mx-auto"
                 />
               </div>
               <h2 className="text-lg font-bold text-gray-800">{isLogin ? "Welcome Back!" : "Create your account"}</h2>
@@ -312,10 +296,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              
+
               {!isLogin && (
                 <>
-                  {/* First Name & Last Name Fields */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
@@ -330,7 +313,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         onChange={(e) => setFirstName(e.target.value)}
                         className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
                       />
-                      <label 
+                      <label
                         htmlFor="firstName"
                         className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
                         peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
@@ -352,7 +335,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         onChange={(e) => setLastName(e.target.value)}
                         className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
                       />
-                      <label 
+                      <label
                         htmlFor="lastName"
                         className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
                         peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
@@ -363,7 +346,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     </div>
                   </div>
 
-                  {/* Phone Number Field */}
                   <div className={`relative group bg-white border ${isPhoneInvalid ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
                     <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isPhoneInvalid ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
                       <Phone size={15} />
@@ -377,7 +359,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                       onChange={handlePhoneChange}
                       className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
                     />
-                    <label 
+                    <label
                       htmlFor="phone"
                       className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20
                       ${isPhoneInvalid ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
@@ -390,7 +372,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </>
               )}
 
-              {/* Email Address or Phone Number Field */}
               <div className={`relative group bg-white border ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
                 <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
                   {isLogin ? getLoginIcon() : <Mail size={15} />}
@@ -399,12 +380,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   type="text"
                   id="email"
                   placeholder=" "
-                  required={isLogin} 
+                  required={isLogin}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
                 />
-                <label 
+                <label
                   htmlFor="email"
                   className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20
                   ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
@@ -415,7 +396,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </label>
               </div>
 
-              {/* Password Field */}
               <div>
                 <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
@@ -430,7 +410,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
                   />
-                  <label 
+                  <label
                     htmlFor="password"
                     className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
                     peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
@@ -440,7 +420,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </label>
                 </div>
 
-                {/* Password Strength Indicator */}
                 {!isLogin && password && (
                   <div className="mt-2 px-1 animate-in fade-in duration-200">
                     <div className="flex justify-between items-center mb-1">
@@ -472,7 +451,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </button>
             </form>
 
-            {/* Toggle Link */}
             <p className="text-center text-[11px] text-gray-500 mt-6">
               {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
