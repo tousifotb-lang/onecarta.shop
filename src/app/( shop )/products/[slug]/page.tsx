@@ -38,10 +38,10 @@ function AddToCartButton({
   quantity: number;
   productId: string;
 }) {
-  const router = useRouter();
-
   // ✅ cart store থেকে real count — remove করলে automatically কমবে
   const cartItems = useCartStore((state) => state.items);
+  const openCart = useCartStore((state) => state.openCart);
+
   const cartCount = cartItems
     .filter((item) => item._id === productId)
     .reduce((sum, item) => sum + item.quantity, 0);
@@ -57,9 +57,9 @@ function AddToCartButton({
   }, [cartCount]);
 
   const handleClick = () => {
-    // ✅ "View Cart" state এ click = cart page এ যাও
+    // ✅ "View Cart" state এ click = cart drawer খুলে যাবে (page navigate না)
     if (state === "added") {
-      router.push("/cart");
+      openCart();
       return;
     }
 

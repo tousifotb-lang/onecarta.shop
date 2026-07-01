@@ -12,21 +12,24 @@ export interface CartItem {
   brand: string;
   stock: number;
   quantity: number;
-  userEmail?: string; // 🔑 কার আইটেম সেটা ট্র্যাক করার জন্য ইমেইল ট্যাগ
+  userEmail?: string;
 }
 
 interface CartStore {
   items: CartItem[];
+  isCartOpen: boolean; // ✅ drawer visibility — global
   addItem: (item: Omit<CartItem, "quantity" | "userEmail">, quantity?: number) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  getCartItems: () => CartItem[]; // 🔒 শুধুমাত্র কারেন্ট ইউজারের আইটেমগুলো ফিল্টার করে গেট করার ফাংশন
+  getCartItems: () => CartItem[];
   totalItems: () => number;
   totalPrice: () => number;
+  openCart: () => void;   // ✅
+  closeCart: () => void;  // ✅
+  toggleCart: () => void; // ✅
 }
 
-// 🔐 লোকালস্টোরেজ থেকে কারেন্ট ইউজারের ইমেইল রিড করার হেল্পার ফাংশন
 const getCurrentUserEmail = (): string => {
   if (typeof window !== "undefined") {
     const email = localStorage.getItem("userEmail");
@@ -39,12 +42,12 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      isCartOpen: false,
 
       addItem: (newItem, quantity = 1) => {
         const currentUserEmail = getCurrentUserEmail();
         const allItems = get().items;
-        
-        // একই প্রোডাক্ট কিন্তু কারেন্ট ইউজারের কি না তা চেক করা হচ্ছে
+
         const existing = allItems.find(
           (i) => i._id === newItem._id && i.userEmail === currentUserEmail
         );
@@ -58,14 +61,12 @@ export const useCartStore = create<CartStore>()(
             ),
           });
         } else {
-          // নতুন আইটেমে ইউজারের ইমেইল ট্যাগ করে পুশ করা হচ্ছে
           set({ items: [...allItems, { ...newItem, quantity, userEmail: currentUserEmail }] });
         }
       },
 
       removeItem: (id) => {
         const currentUserEmail = getCurrentUserEmail();
-        // শুধুমাত্র কারেন্ট ইউজারের ওই নির্দিষ্ট প্রোডাক্টটি রিমুভ হবে
         set({
           items: get().items.filter((i) => !(i._id === id && i.userEmail === currentUserEmail)),
         });
@@ -73,7 +74,7 @@ export const useCartStore = create<CartStore>()(
 
       updateQuantity: (id, quantity) => {
         const currentUserEmail = getCurrentUserEmail();
-        
+
         if (quantity < 1) {
           set({
             items: get().items.filter((i) => !(i._id === id && i.userEmail === currentUserEmail)),
@@ -92,11 +93,9 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => {
         const currentUserEmail = getCurrentUserEmail();
-        // শুধুমাত্র কারেন্ট ইউজারের আইটেমগুলো ক্লিয়ার হবে, অন্যদের ডাটা অক্ষত থাকবে
         set({ items: get().items.filter((i) => i.userEmail !== currentUserEmail) });
       },
 
-      // 🔒 ভিউ বা পেজে কাস্টমারকে শুধু তার কার্ট দেখানোর জন্য ফিল্টারড মেথড
       getCartItems: () => {
         const currentUserEmail = getCurrentUserEmail();
         return get().items.filter((i) => i.userEmail === currentUserEmail);
@@ -109,10 +108,15 @@ export const useCartStore = create<CartStore>()(
       totalPrice: () => {
         return get().getCartItems().reduce((sum, i) => sum + i.price * i.quantity, 0);
       },
+
+      openCart: () => set({ isCartOpen: true }),
+      closeCart: () => set({ isCartOpen: false }),
+      toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
     }),
     {
       name: "onecarta-multi-cart",
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ items: state.items }), // ✅ isCartOpen persist hobe na — refresh e drawer auto-open hobe na
     }
   )
 );
