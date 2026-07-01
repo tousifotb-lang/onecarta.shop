@@ -290,9 +290,6 @@ export default function ProductDetailPage() {
     );
   }
 
-  // ✅ FIX: ProductCard.tsx এর মতোই fallback — DB তে কিছু product এ `name`,
-  // কিছুতে `title` field আছে। fallback ছাড়া সরাসরি product.name পড়লে
-  // যেসব product এ শুধু `title` আছে সেগুলোর নাম blank দেখাচ্ছিল।
   const productName = product.name || product.title || "Unknown Product";
 
   const displayPrice = product.isFlashSale && product.flashSalePrice
@@ -374,25 +371,25 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         {/* Image Section */}
         <div className="space-y-3">
-          <div className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden h-96 flex items-center justify-center">
-            {discountPercent > 0 && (
-              <span className="absolute top-4 left-4 z-10 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-                -{discountPercent}% OFF
-              </span>
-            )}
-            {product.isFlashSale && (
-              <span className="absolute top-4 right-4 z-10 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-                ⚡ Flash Sale
-              </span>
-            )}
-            <Image
-              src={images[selectedImage]}
-              alt={productName}
-              width={400}
-              height={400}
-              className="object-contain max-h-80 w-auto transition-all duration-300"
-            />
-          </div>
+          <div className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden h-96">
+              {discountPercent > 0 && (
+                <span className="absolute top-4 left-4 z-10 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                  -{discountPercent}% OFF
+                </span>
+              )}
+              {product.isFlashSale && (
+                <span className="absolute top-4 right-4 z-10 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                  ⚡ Flash Sale
+                </span>
+              )}
+              <Image
+                src={images[selectedImage]}
+                alt={productName}
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain p-6 transition-all duration-300"
+              />
+            </div>
 
           {images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-1">
