@@ -205,8 +205,8 @@ useEffect(() => {
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    setMounted(true);
-  }, []);
+  setMounted(true);
+}, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

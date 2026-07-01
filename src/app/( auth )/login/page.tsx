@@ -60,8 +60,6 @@ export default function AuthPage() {
 
         await performLogin(email, password);
       }
-      // router.push/refresh এর বদলে hard redirect — এতে SessionProvider পুরোপুরি
-      // fresh session fetch করতে বাধ্য হয়, কোনো stale client-side cache থাকে না
       window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");

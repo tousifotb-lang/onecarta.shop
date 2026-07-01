@@ -1,102 +1,83 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 
-export interface WishlistItem {
+interface WishlistItem {
   _id: string;
   name: string;
   slug: string;
   image: string;
   price: number;
-  originalPrice: number;
-  category: string;
-  brand: string;
-  stock: number;
-  userEmail?: string; // 🔑 cartStore এর মতো user tracking
+  originalPrice?: number;
+  category?: string;
+  brand?: string;
+  stock?: number;
 }
 
-interface WishlistStore {
+interface WishlistState {
   items: WishlistItem[];
-  addToWishlist: (product: Omit<WishlistItem, "userEmail">) => void;
-  removeFromWishlist: (id: string) => void;
-  isInWishlist: (id: string) => boolean;
-  toggleWishlist: (product: Omit<WishlistItem, "userEmail">) => void;
+  loaded: boolean;
+  fetchWishlist: () => Promise<void>;
+  isInWishlist: (productId: string) => boolean;
+  toggleWishlist: (product: WishlistItem) => Promise<void>;
   getWishlistItems: () => WishlistItem[];
   clearWishlist: () => void;
 }
 
-// cartStore এর মতো same helper
-const getCurrentUserEmail = (): string => {
-  if (typeof window !== "undefined") {
-    const email = localStorage.getItem("userEmail");
-    return email ? email.trim().toLowerCase() : "guest_user";
-  }
-  return "guest_user";
-};
+export const useWishlistStore = create<WishlistState>((set, get) => ({
+  items: [],
+  loaded: false,
 
-export const useWishlistStore = create<WishlistStore>()(
-  persist(
-    (set, get) => ({
-      items: [],
-
-      addToWishlist: (product) => {
-        const currentUserEmail = getCurrentUserEmail();
-        const exists = get().items.find(
-          (i) => i._id === product._id && i.userEmail === currentUserEmail
-        );
-        if (!exists) {
-          set((state) => ({
-            items: [...state.items, { ...product, userEmail: currentUserEmail }],
-          }));
-        }
-      },
-
-      removeFromWishlist: (id) => {
-        const currentUserEmail = getCurrentUserEmail();
-        set((state) => ({
-          items: state.items.filter(
-            (i) => !(i._id === id && i.userEmail === currentUserEmail)
-          ),
-        }));
-      },
-
-      isInWishlist: (id) => {
-        const currentUserEmail = getCurrentUserEmail();
-        return get().items.some(
-          (i) => i._id === id && i.userEmail === currentUserEmail
-        );
-      },
-
-      toggleWishlist: (product) => {
-        const currentUserEmail = getCurrentUserEmail();
-        const exists = get().items.find(
-          (i) => i._id === product._id && i.userEmail === currentUserEmail
-        );
-        if (exists) {
-          set((state) => ({
-            items: state.items.filter(
-              (i) => !(i._id === product._id && i.userEmail === currentUserEmail)
-            ),
-          }));
-        } else {
-          set((state) => ({
-            items: [...state.items, { ...product, userEmail: currentUserEmail }],
-          }));
-        }
-      },
-
-      getWishlistItems: () => {
-        const currentUserEmail = getCurrentUserEmail();
-        return get().items.filter((i) => i.userEmail === currentUserEmail);
-      },
-
-      clearWishlist: () => {
-        const currentUserEmail = getCurrentUserEmail();
-        set({ items: get().items.filter((i) => i.userEmail !== currentUserEmail) });
-      },
-    }),
-    {
-      name: "onecarta-wishlist",
-      storage: createJSONStorage(() => localStorage),
+  fetchWishlist: async () => {
+    try {
+      const res = await fetch("/api/users/wishlist");
+      if (!res.ok) {
+        set({ items: [], loaded: true });
+        return;
+      }
+      const data = await res.json();
+      const mapped: WishlistItem[] = Array.isArray(data)
+        ? data.map((p: any) => ({
+            _id: p._id,
+            name: p.title || p.name,
+            slug: p.slug,
+            image: p.images?.[0] || "",
+            price: p.discountPrice && p.discountPrice > 0 ? p.discountPrice : p.price,
+            originalPrice: p.price,
+            category: p.category,
+            brand: p.brand,
+            stock: p.stock,
+          }))
+        : [];
+      set({ items: mapped, loaded: true });
+    } catch {
+      set({ items: [], loaded: true });
     }
-  )
-);
+  },
+
+  isInWishlist: (productId: string) => {
+    return get().items.some((item) => item._id === productId);
+  },
+
+  toggleWishlist: async (product: WishlistItem) => {
+    const isCurrentlyIn = get().isInWishlist(product._id);
+
+    if (isCurrentlyIn) {
+      set({ items: get().items.filter((i) => i._id !== product._id) });
+      await fetch("/api/users/wishlist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product._id }),
+      });
+    } else {
+      set({ items: [...get().items, product] });
+      await fetch("/api/users/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product._id }),
+      });
+    }
+  },
+
+  getWishlistItems: () => get().items,
+
+  clearWishlist: () => set({ items: [], loaded: false }),
+}));

@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
-  providers: [], // Edge runtime এ bcrypt/mongoose থাকবে না, তাই providers এখানে খালি
+  providers: [],
   pages: {
     signIn: "/login",
   },

@@ -54,7 +54,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
 
   const isPhoneInvalid = !isLogin && phone.length > 0 && !phone.startsWith("0");
-
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const bdFullPhoneRegex = /^01[1-9]\d{8}$/;
 
@@ -62,7 +61,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (!isLogin || email.trim().length === 0) return false;
     const input = email.trim();
     const isNumeric = /^[+]?[\d]*$/.test(input.replace(/[\s-]/g, ""));
-
     if (isNumeric) {
       if (input.length > 2 && !input.startsWith("0")) return true;
       if (input.length === 11 && !bdFullPhoneRegex.test(input)) return true;
@@ -78,21 +76,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const getPasswordStrength = () => {
     if (!password) return { label: "", color: "bg-gray-200", textColor: "text-gray-400", width: "w-0" };
-
     let score = 0;
     if (password.length >= 6) score++;
     if (password.length >= 8) score++;
     if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
-
-    if (score <= 2) {
-      return { label: "Weak", color: "bg-red-500", textColor: "text-red-500", width: "w-1/3" };
-    } else if (score <= 4) {
-      return { label: "Medium", color: "bg-yellow-500", textColor: "text-yellow-600", width: "w-2/3" };
-    } else {
-      return { label: "Strong", color: "bg-green-500", textColor: "text-green-600", width: "w-full" };
-    }
+    if (score <= 2) return { label: "Weak", color: "bg-red-500", textColor: "text-red-500", width: "w-1/3" };
+    else if (score <= 4) return { label: "Medium", color: "bg-yellow-500", textColor: "text-yellow-600", width: "w-2/3" };
+    else return { label: "Strong", color: "bg-green-500", textColor: "text-green-600", width: "w-full" };
   };
 
   const strength = getPasswordStrength();
@@ -106,9 +98,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value.replace(/\D/g, "");
-    if (inputValue.length <= 11) {
-      setPhone(inputValue);
-    }
+    if (inputValue.length <= 11) setPhone(inputValue);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +123,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setLoading(true);
 
     if (isLogin) {
-      // 🔐 Login Flow — real backend verification + NextAuth session creation
       try {
         let loginPayload = email.trim().toLowerCase();
         const cleanedPayload = loginPayload.replace(/[\s-]/g, "");
@@ -178,7 +167,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           return;
         }
 
-        // ✅ এখানেই আসল session তৈরি হচ্ছে — localStorage এর বদলে NextAuth credentials provider দিয়ে
         const result = await signIn("credentials", {
           userObject: JSON.stringify(userData),
           redirect: false,
@@ -192,15 +180,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         setLoading(false);
         onClose();
-
-        // Hard redirect — যাতে SessionProvider fresh session fetch করতে বাধ্য হয়
         setTimeout(() => { window.location.href = "/dashboard"; }, 100);
       } catch (err) {
         setError("Something went wrong. Please try again.");
         setLoading(false);
       }
     } else {
-      // 📝 Registration Flow
       try {
         const cleanedPhone = phone.trim();
         const fullName = lastName.trim() ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim();
@@ -210,12 +195,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: fullName,
-            phone: cleanedPhone,
-            email: finalEmail,
-            password
-          }),
+          body: JSON.stringify({ name: fullName, phone: cleanedPhone, email: finalEmail, password }),
         });
 
         const data = await response.json();
@@ -255,21 +235,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <CheckCircle size={56} className="animate-bounce" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800">Account Created!</h2>
-            <p className="text-sm text-gray-500 mt-2 px-4">
-              Your account has been successfully created. Please click below to sign in.
-            </p>
-
+            <p className="text-sm text-gray-500 mt-2 px-4">Your account has been successfully created. Please click below to sign in.</p>
             <div className="mt-8">
               <button
-                onClick={() => {
-                  setIsRegistered(false);
-                  setIsLogin(true);
-                  setPassword("");
-                }}
+                onClick={() => { setIsRegistered(false); setIsLogin(true); setPassword(""); }}
                 className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                Sign In Now
-                <ArrowRight size={14} />
+                Sign In Now <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -277,156 +249,58 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <>
             <div className="text-center mb-8">
               <div className="inline-block mb-3">
-                <img
-                  src="/logo/logo2.png"
-                  alt="onecarta logo"
-                  className="h-9 w-auto object-contain mx-auto"
-                />
+                <img src="/logo/logo2.png" alt="onecarta logo" className="h-9 w-auto object-contain mx-auto" />
               </div>
               <h2 className="text-lg font-bold text-gray-800">{isLogin ? "Welcome Back!" : "Create your account"}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {isLogin ? "Sign in to manage your orders & wishlist" : "Join us to experience fast checkout"}
-              </p>
+              <p className="text-xs text-gray-400 mt-0.5">{isLogin ? "Sign in to manage your orders & wishlist" : "Join us to experience fast checkout"}</p>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-semibold p-3 rounded-xl mb-4 text-center">
-                {error}
-              </div>
+              <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-semibold p-3 rounded-xl mb-4 text-center">{error}</div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-
               {!isLogin && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
-                        <User size={15} />
-                      </span>
-                      <input
-                        type="text"
-                        id="firstName"
-                        placeholder=" "
-                        required={!isLogin}
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
-                      />
-                      <label
-                        htmlFor="firstName"
-                        className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
-                        peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
-                        peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]"
-                      >
-                        First Name
-                      </label>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors"><User size={15} /></span>
+                      <input type="text" id="firstName" placeholder=" " required={!isLogin} value={firstName} onChange={(e) => setFirstName(e.target.value)} className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10" />
+                      <label htmlFor="firstName" className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]">First Name</label>
                     </div>
-
                     <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
-                        <User size={15} />
-                      </span>
-                      <input
-                        type="text"
-                        id="lastName"
-                        placeholder=" "
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
-                      />
-                      <label
-                        htmlFor="lastName"
-                        className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
-                        peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
-                        peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]"
-                      >
-                        Last Name (Optional)
-                      </label>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors"><User size={15} /></span>
+                      <input type="text" id="lastName" placeholder=" " value={lastName} onChange={(e) => setLastName(e.target.value)} className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10" />
+                      <label htmlFor="lastName" className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]">Last Name (Optional)</label>
                     </div>
                   </div>
 
                   <div className={`relative group bg-white border ${isPhoneInvalid ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
-                    <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isPhoneInvalid ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
-                      <Phone size={15} />
-                    </span>
-                    <input
-                      type="tel"
-                      id="phone"
-                      placeholder=" "
-                      required={!isLogin}
-                      value={phone}
-                      onChange={handlePhoneChange}
-                      className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
-                    />
-                    <label
-                      htmlFor="phone"
-                      className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20
-                      ${isPhoneInvalid ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
-                      peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px]
-                      peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]`}
-                    >
-                      Phone Number
-                    </label>
+                    <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isPhoneInvalid ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}><Phone size={15} /></span>
+                    <input type="tel" id="phone" placeholder=" " required={!isLogin} value={phone} onChange={handlePhoneChange} className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10" />
+                    <label htmlFor="phone" className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20 ${isPhoneInvalid ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'} peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]`}>Phone Number</label>
                   </div>
                 </>
               )}
 
               <div className={`relative group bg-white border ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'border-red-500 focus-within:border-red-500' : 'border-gray-200 focus-within:border-[#2c2769]'} rounded-xl transition-all`}>
-                <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>
-                  {isLogin ? getLoginIcon() : <Mail size={15} />}
-                </span>
-                <input
-                  type="text"
-                  id="email"
-                  placeholder=" "
-                  required={isLogin}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
-                />
-                <label
-                  htmlFor="email"
-                  className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20
-                  ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'}
-                  peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px]
-                  peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]`}
-                >
-                  {isLogin ? "Email Address or Phone Number" : "Email Address (Optional)"}
-                </label>
+                <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500' : 'text-gray-400 group-focus-within:text-[#2c2769]'} z-10 transition-colors`}>{isLogin ? getLoginIcon() : <Mail size={15} />}</span>
+                <input type="text" id="email" placeholder=" " required={isLogin} value={email} onChange={(e) => setEmail(e.target.value)} className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10" />
+                <label htmlFor="email" className={`absolute left-9 top-1/2 -translate-y-1/2 text-xs bg-white px-1 pointer-events-none transition-all duration-200 origin-left z-20 ${isLoginInputInvalid() || (isEmailInvalid && !isLogin) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-[#2c2769] peer-focus:font-bold'} peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]`}>{isLogin ? "Email Address or Phone Number" : "Email Address (Optional)"}</label>
               </div>
 
               <div>
                 <div className="relative group bg-white border border-gray-200 focus-within:border-[#2c2769] rounded-xl transition-all">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors">
-                    <Lock size={15} />
-                  </span>
-                  <input
-                    type="password"
-                    id="password"
-                    placeholder=" "
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10"
-                  />
-                  <label
-                    htmlFor="password"
-                    className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left
-                    peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20
-                    peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]"
-                  >
-                    Password
-                  </label>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2c2769] z-10 transition-colors"><Lock size={15} /></span>
+                  <input type="password" id="password" placeholder=" " required value={password} onChange={(e) => setPassword(e.target.value)} className="peer w-full text-xs text-gray-800 pl-9 pr-3 py-3 bg-transparent focus:outline-none relative z-10" />
+                  <label htmlFor="password" className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-white px-1 pointer-events-none transition-all duration-200 origin-left peer-focus:-top-0.5 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:text-[#2c2769] peer-focus:font-bold z-20 peer-[:not(:placeholder-shown)]:-top-0.5 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[10px]">Password</label>
                 </div>
 
                 {!isLogin && password && (
                   <div className="mt-2 px-1 animate-in fade-in duration-200">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-[10px] font-medium text-gray-400">Password strength:</span>
-                      <span className={`text-[10px] font-bold ${strength.textColor} uppercase tracking-wider`}>
-                        {strength.label}
-                      </span>
+                      <span className={`text-[10px] font-bold ${strength.textColor} uppercase tracking-wider`}>{strength.label}</span>
                     </div>
                     <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300 rounded-full`} />
@@ -441,11 +315,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
-              >
+              <button type="submit" disabled={loading} className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50">
                 {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
                 {!loading && <ArrowRight size={13} />}
               </button>
@@ -453,17 +323,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
             <p className="text-center text-[11px] text-gray-500 mt-6">
               {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button
-                onClick={() => { setIsLogin(!isLogin); setError(""); }}
-                type="button"
-                className="font-bold text-[#2c2769] hover:underline ml-1"
-              >
+              <button onClick={() => { setIsLogin(!isLogin); setError(""); }} type="button" className="font-bold text-[#2c2769] hover:underline ml-1">
                 {isLogin ? "Sign Up Now" : "Sign In here"}
               </button>
             </p>
           </>
         )}
-
       </div>
     </div>
   );
