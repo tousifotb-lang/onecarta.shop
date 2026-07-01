@@ -6,19 +6,29 @@ import bcrypt from "bcryptjs";
 export async function POST(req: Request) {
   try {
     await connectDB();
+    const { name, phone, email, password } = await req.json();
 
-    const body = await req.json();
-    const { name, email, password } = body;
-
-    if (!name || !email || !password) {
+    if (!name || !phone || !email || !password) {
       return NextResponse.json(
-        { error: "Name, email, and password are required!" },
+        { error: "Name, phone, email, and password are required!" },
         { status: 400 }
       );
     }
 
-    const userExists = await User.findOne({ email: email.toLowerCase() });
-    if (userExists) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPhone = phone.trim();
+
+    const existingUser = await User.findOne({
+      $or: [{ email: normalizedEmail }, { phone: normalizedPhone }],
+    });
+
+    if (existingUser) {
+      if (existingUser.phone === normalizedPhone) {
+        return NextResponse.json(
+          { error: "This phone number is already registered!" },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: "This email is already registered!" },
         { status: 400 }
@@ -28,27 +38,30 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
       password: hashedPassword,
       role: "user",
-      addresses: [],
       isActive: true,
     });
 
     return NextResponse.json(
       {
-        message: "Account created successfully!",
-        user: { name: newUser.name, email: newUser.email },
+        id: newUser._id.toString(),
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
       },
       { status: 201 }
     );
-
   } catch (error: any) {
-    console.error("REGISTRATION ERROR:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    if (error?.code === 11000) {
+      return NextResponse.json(
+        { error: "This email or phone number is already registered!" },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
