@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -38,7 +39,6 @@ function AddToCartButton({
   quantity: number;
   productId: string;
 }) {
-  // ✅ cart store থেকে real count — remove করলে automatically কমবে
   const cartItems = useCartStore((state) => state.items);
   const openCart = useCartStore((state) => state.openCart);
 
@@ -51,13 +51,11 @@ function AddToCartButton({
   const [iconWiggle, setIconWiggle] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // cart থেকে সব remove হলে button reset
   useEffect(() => {
     if (cartCount === 0) setState("idle");
   }, [cartCount]);
 
   const handleClick = () => {
-    // ✅ "View Cart" state এ click = cart drawer খুলে যাবে (page navigate না)
     if (state === "added") {
       openCart();
       return;
@@ -108,7 +106,6 @@ function AddToCartButton({
       }}
       className="relative flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {/* Ripple on press */}
       {isPressing && (
         <span
           className="absolute inset-0 rounded-xl"
@@ -119,7 +116,6 @@ function AddToCartButton({
         />
       )}
 
-      {/* Cart icon with wiggle */}
       <span
         style={{
           display: "inline-flex",
@@ -137,7 +133,6 @@ function AddToCartButton({
         )}
       </span>
 
-      {/* Text slide transition */}
       <span className="relative overflow-hidden h-5 flex items-center">
         <span
           style={{
@@ -165,7 +160,6 @@ function AddToCartButton({
         </span>
       </span>
 
-      {/* ✅ Real cart count from store */}
       {cartCount > 0 && (
         <span
           style={{
@@ -187,7 +181,6 @@ function AddToCartButton({
         </span>
       )}
 
-      {/* Arrow when added */}
       {isAdded && (
         <ArrowRight
           size={15}
@@ -221,6 +214,7 @@ function AddToCartButton({
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const router = useRouter();
+  const { status } = useSession();
   const addItem = useCartStore((state) => state.addItem);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { openModal } = useAuthModalStore();
@@ -232,12 +226,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews">("description");
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+
+  const isLoggedIn = mounted && status === "authenticated";
 
   useEffect(() => {
     setMounted(true);
-    setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
   }, []);
 
   useEffect(() => {
@@ -266,54 +260,6 @@ export default function ProductDetailPage() {
       setLoading(false);
     }
   };
-
-  const handleAddToCart = () => {
-    if (!product) return;
-    addItem({
-      _id: product._id,
-      name: product.name,
-      slug: product.slug,
-      image: getImageUrl(product.images[0]) || "",
-      price: product.isFlashSale && product.flashSalePrice ? product.flashSalePrice : product.price,
-      originalPrice: product.originalPrice,
-      category: product.category,
-      brand: product.brand || "",
-      stock: product.stock,
-    }, quantity);
-  };
-
-  const handleBuyNow = () => {
-    if (!product || buyingNow) return;
-    setBuyingNow(true);
-    addItem({
-      _id: product._id,
-      name: product.name,
-      slug: product.slug,
-      image: getImageUrl(product.images[0]) || "",
-      price: product.isFlashSale && product.flashSalePrice ? product.flashSalePrice : product.price,
-      originalPrice: product.originalPrice,
-      category: product.category,
-      brand: product.brand || "",
-      stock: product.stock,
-    }, quantity);
-    setTimeout(() => router.push("/checkout"), 800);
-  };
-
-  const handleWishlist = () => {
-  if (!isLoggedIn) { openModal(); return; }
-  if (!product) return;
-  toggleWishlist({
-    _id: product._id,
-    name: product.name,
-    slug: product.slug,
-    image: getImageUrl(product.images[0]) || "",
-    price: displayPrice,
-    originalPrice: product.originalPrice,
-    category: product.category,
-    brand: product.brand || "",
-    stock: product.stock,
-  });
-};
 
   if (loading) {
     return (
@@ -344,6 +290,11 @@ export default function ProductDetailPage() {
     );
   }
 
+  // ✅ FIX: ProductCard.tsx এর মতোই fallback — DB তে কিছু product এ `name`,
+  // কিছুতে `title` field আছে। fallback ছাড়া সরাসরি product.name পড়লে
+  // যেসব product এ শুধু `title` আছে সেগুলোর নাম blank দেখাচ্ছিল।
+  const productName = product.name || product.title || "Unknown Product";
+
   const displayPrice = product.isFlashSale && product.flashSalePrice
     ? product.flashSalePrice
     : product.price;
@@ -356,7 +307,55 @@ export default function ProductDetailPage() {
 
   const images: string[] = product.images.length > 0
     ? product.images.map((img) => getImageUrl(img)).filter((url) => url !== "")
-    : [`https://placehold.co/400x400/39378c/white?text=${encodeURIComponent(product.name)}`];
+    : [`https://placehold.co/400x400/39378c/white?text=${encodeURIComponent(productName)}`];
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addItem({
+      _id: product._id,
+      name: productName,
+      slug: product.slug,
+      image: getImageUrl(product.images[0]) || "",
+      price: displayPrice,
+      originalPrice: product.originalPrice,
+      category: product.category,
+      brand: product.brand || "",
+      stock: product.stock,
+    }, quantity);
+  };
+
+  const handleBuyNow = () => {
+    if (!product || buyingNow) return;
+    setBuyingNow(true);
+    addItem({
+      _id: product._id,
+      name: productName,
+      slug: product.slug,
+      image: getImageUrl(product.images[0]) || "",
+      price: displayPrice,
+      originalPrice: product.originalPrice,
+      category: product.category,
+      brand: product.brand || "",
+      stock: product.stock,
+    }, quantity);
+    setTimeout(() => router.push("/checkout"), 800);
+  };
+
+  const handleWishlist = () => {
+    if (!isLoggedIn) { openModal(); return; }
+    if (!product) return;
+    toggleWishlist({
+      _id: product._id,
+      name: productName,
+      slug: product.slug,
+      image: getImageUrl(product.images[0]) || "",
+      price: displayPrice,
+      originalPrice: product.originalPrice,
+      category: product.category,
+      brand: product.brand || "",
+      stock: product.stock,
+    });
+  };
 
   return (
     <div className="container-main py-6">
@@ -369,7 +368,7 @@ export default function ProductDetailPage() {
           {product.category}
         </Link>
         <ChevronRight size={14} />
-        <span className="text-gray-800 font-medium line-clamp-1">{product.name}</span>
+        <span className="text-gray-800 font-medium line-clamp-1">{productName}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -388,7 +387,7 @@ export default function ProductDetailPage() {
             )}
             <Image
               src={images[selectedImage]}
-              alt={product.name}
+              alt={productName}
               width={400}
               height={400}
               className="object-contain max-h-80 w-auto transition-all duration-300"
@@ -427,7 +426,7 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl font-extrabold text-gray-900 leading-snug">{product.name}</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900 leading-snug">{productName}</h1>
 
           <div className="flex items-center gap-3">
             <StarRating rating={product.rating} count={product.reviewCount} size={16} />
@@ -486,7 +485,6 @@ export default function ProductDetailPage() {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            {/* ✅ Premium animated Add to Cart — cart store synced */}
             <AddToCartButton
               onAdd={handleAddToCart}
               disabled={product.stock === 0}
@@ -494,7 +492,6 @@ export default function ProductDetailPage() {
               productId={product._id}
             />
 
-            {/* Buy Now */}
             <button
               onClick={handleBuyNow}
               disabled={product.stock === 0 || buyingNow}
@@ -522,7 +519,6 @@ export default function ProductDetailPage() {
               </span>
             </button>
 
-            {/* Wishlist */}
             <button
               onClick={handleWishlist}
               className={`p-3 border rounded-xl transition-all duration-200 ${
@@ -540,13 +536,11 @@ export default function ProductDetailPage() {
               />
             </button>
 
-            {/* Share */}
             <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
               <Share2 size={20} className="text-gray-400" />
             </button>
           </div>
 
-          {/* Trust badges */}
           <div className="border border-gray-100 rounded-xl divide-y divide-gray-100">
             <div className="flex items-center gap-3 p-3">
               <div className="bg-[#eeedf5] p-2 rounded-lg">
