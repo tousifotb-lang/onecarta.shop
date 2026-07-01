@@ -481,62 +481,64 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            <AddToCartButton
-              onAdd={handleAddToCart}
-              disabled={product.stock === 0}
-              quantity={quantity}
-              productId={product._id}
-            />
+            <div className="flex gap-3">
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                <AddToCartButton
+                  onAdd={handleAddToCart}
+                  disabled={product.stock === 0}
+                  quantity={quantity}
+                  productId={product._id}
+                />
 
-            <button
-              onClick={handleBuyNow}
-              disabled={product.stock === 0 || buyingNow}
-              className={`flex-1 relative overflow-hidden py-3 rounded-xl font-bold text-sm transition-all duration-300 disabled:cursor-not-allowed
-                ${buyingNow
-                  ? "bg-orange-400 scale-95 shadow-lg shadow-orange-200"
-                  : "bg-orange-500 hover:bg-orange-600 hover:scale-[1.02] hover:shadow-md hover:shadow-orange-200 active:scale-95"
-                } text-white`}
-            >
-              {buyingNow && (
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_0.8s_ease-in-out]" />
-              )}
-              <span className={`flex items-center justify-center gap-2 transition-all duration-300 ${buyingNow ? "scale-90 opacity-80" : ""}`}>
-                {buyingNow ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                    Just a Moment...
-                  </>
-                ) : (
-                  <>⚡ Buy Now</>
-                )}
-              </span>
-            </button>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={product.stock === 0 || buyingNow}
+                  className={`relative overflow-hidden py-3 rounded-xl font-bold text-sm transition-all duration-300 disabled:cursor-not-allowed
+                    ${buyingNow
+                      ? "bg-orange-400 scale-95 shadow-lg shadow-orange-200"
+                      : "bg-orange-500 hover:bg-orange-600 hover:scale-[1.02] hover:shadow-md hover:shadow-orange-200 active:scale-95"
+                    } text-white`}
+                >
+                  {buyingNow && (
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_0.8s_ease-in-out]" />
+                  )}
+                  <span className={`flex items-center justify-center gap-2 transition-all duration-300 ${buyingNow ? "scale-90 opacity-80" : ""}`}>
+                    {buyingNow ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                        Just a Moment...
+                      </>
+                    ) : (
+                      <>⚡ Buy Now</>
+                    )}
+                  </span>
+                </button>
+              </div>
 
-            <button
-              onClick={handleWishlist}
-              className={`p-3 border rounded-xl transition-all duration-200 ${
-                isWishlisted
-                  ? "border-red-300 bg-red-50"
-                  : "border-gray-200 hover:bg-red-50 hover:border-red-200"
-              }`}
-              title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-            >
-              <Heart
-                size={20}
-                className={`transition-all duration-200 ${
-                  isWishlisted ? "text-red-500 fill-red-500" : "text-gray-400 hover:text-red-500"
+              <button
+                onClick={handleWishlist}
+                className={`p-3 border rounded-xl transition-all duration-200 ${
+                  isWishlisted
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-200 hover:bg-red-50 hover:border-red-200"
                 }`}
-              />
-            </button>
+                title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+              >
+                <Heart
+                  size={20}
+                  className={`transition-all duration-200 ${
+                    isWishlisted ? "text-red-500 fill-red-500" : "text-gray-400 hover:text-red-500"
+                  }`}
+                />
+              </button>
 
-            <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-              <Share2 size={20} className="text-gray-400" />
-            </button>
-          </div>
+              <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                <Share2 size={20} className="text-gray-400" />
+              </button>
+            </div>
 
           <div className="border border-gray-100 rounded-xl divide-y divide-gray-100">
             <div className="flex items-center gap-3 p-3">
