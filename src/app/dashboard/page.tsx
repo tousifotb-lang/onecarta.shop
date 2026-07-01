@@ -136,7 +136,7 @@ const districtList = Object.keys(locationData).sort();
 const NON_CANCELLABLE_STATUSES = ["Delivered", "Completed", "Cancelled", "Returned"];
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -365,6 +365,10 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error(data.error || "Update failed");
 
       setProfile((prev) => (prev ? { ...prev, ...data } : prev));
+
+      // Refresh the NextAuth session/JWT so the header dropdown shows the new name
+      await update({ name: data.name, phone: data.phone });
+
       setProfileSavedOk(true);
       setProfileSavedMsg("Profile updated successfully!");
       setTimeout(() => setProfileSavedMsg(""), 3000);

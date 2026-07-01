@@ -6,11 +6,19 @@ export const authConfig = {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
         token.phone = (user as any).phone;
+        token.name = (user as any).name;
+        token.email = (user as any).email;
+      }
+      // Client called update() after profile save — refresh token fields
+      if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.email) token.email = session.email;
+        if (session.phone) token.phone = session.phone;
       }
       return token;
     },
@@ -19,6 +27,8 @@ export const authConfig = {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
         (session.user as any).phone = token.phone;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
       }
       return session;
     },
