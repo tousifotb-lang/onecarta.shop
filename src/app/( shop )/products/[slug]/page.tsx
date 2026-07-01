@@ -222,7 +222,7 @@ export default function ProductDetailPage() {
   const { slug } = useParams();
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { openModal } = useAuthModalStore();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -300,24 +300,20 @@ export default function ProductDetailPage() {
   };
 
   const handleWishlist = () => {
-    if (!isLoggedIn) { openModal(); return; }
-    if (!product) return;
-    if (isWishlisted) {
-      removeFromWishlist(product._id);
-    } else {
-      addToWishlist({
-        _id: product._id,
-        name: product.name,
-        slug: product.slug,
-        image: getImageUrl(product.images[0]) || "",
-        price: displayPrice,
-        originalPrice: product.originalPrice,
-        category: product.category,
-        brand: product.brand || "",
-        stock: product.stock,
-      });
-    }
-  };
+  if (!isLoggedIn) { openModal(); return; }
+  if (!product) return;
+  toggleWishlist({
+    _id: product._id,
+    name: product.name,
+    slug: product.slug,
+    image: getImageUrl(product.images[0]) || "",
+    price: displayPrice,
+    originalPrice: product.originalPrice,
+    category: product.category,
+    brand: product.brand || "",
+    stock: product.stock,
+  });
+};
 
   if (loading) {
     return (
