@@ -9,6 +9,7 @@ export interface IProduct extends Document {
   discount: number;
   images: string[];
   category: string;
+  categoryId?: mongoose.Types.ObjectId | null;
   brand: string;
   stock: number;
   sold: number;
@@ -32,6 +33,7 @@ const ProductSchema = new Schema<IProduct>(
     discount: { type: Number, default: 0 },
     images: [{ type: String }],
     category: { type: String, required: true },
+    categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
     brand: { type: String, default: "" },
     stock: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
@@ -49,6 +51,7 @@ const ProductSchema = new Schema<IProduct>(
 
 ProductSchema.index({ name: "text", description: "text", brand: "text" });
 ProductSchema.index({ category: 1, isActive: 1 });
+ProductSchema.index({ categoryId: 1, isActive: 1 });
 ProductSchema.index({ tags: 1 });
 
 export default mongoose.models.Product ||

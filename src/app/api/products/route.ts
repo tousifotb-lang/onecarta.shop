@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
+import Category from "@/models/Category";
+import { getDescendantCategoryIds } from "@/lib/categoryTree";
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
+    const categoryId = searchParams.get("categoryId");
+    const categorySlug = searchParams.get("category"); // legacy/slug-based filter
     const tag = searchParams.get("tag");
     const search = searchParams.get("search");
     const sort = searchParams.get("sort") || "createdAt";
@@ -20,7 +23,23 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = { status: "ACTIVE" };
 
-    if (category) query.category = category;
+    // Resolve which category (if any) we're filtering by, then expand it
+    // to include every descendant subcategory so a parent category page
+    // shows products tagged under any of its children too.
+    let resolvedCategoryId = categoryId;
+    if (!resolvedCategoryId && categorySlug) {
+      const cat = await Category.findOne({ slug: categorySlug }).select("_id").lean();
+      if (cat) resolvedCategoryId = String((cat as any)._id);
+    }
+
+    if (resolvedCategoryId) {
+      const descendantIds = await getDescendantCategoryIds(resolvedCategoryId);
+      query.categoryId = { $in: descendantIds };
+    } else if (categorySlug) {
+      // Fallback for older products that only ever got the plain string field
+      query.category = categorySlug;
+    }
+
     if (tag === "flash-sale") query.isFlashSale = true;
     if (tag === "featured") query.isFeatured = true;
     if (tag === "best-selling") query.sold = { $gte: 0 };
@@ -43,9 +62,7 @@ export async function GET(req: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const sortObj: Record<string, 1 | -1> = {
-      [sort]: order === "asc" ? 1 : -1,
-    };
+    const sortObj: Record<string, 1 | -1> = { [sort]: order === "asc" ? 1 : -1 };
 
     const [products, total] = await Promise.all([
       Product.find(query).sort(sortObj).skip(skip).limit(limit).lean(),

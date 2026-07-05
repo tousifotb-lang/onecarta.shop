@@ -1,19 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { FilterState } from "@/types";
 import { X } from "lucide-react";
 
-const CATEGORIES = [
-  { label: "All Categories", value: "" },
-  { label: "Electronics", value: "electronics" },
-  { label: "Fashion", value: "fashion" },
-  { label: "Home & Living", value: "home-living" },
-  { label: "Groceries", value: "groceries" },
-  { label: "Sports", value: "sports" },
-  { label: "Beauty", value: "beauty" },
-  { label: "Toys", value: "toys" },
-  { label: "Books", value: "books" },
-];
+interface CategoryOption {
+  label: string;
+  value: string; // slug
+}
 
 const BRANDS = ["Apple", "Samsung", "Sony", "Nike", "Walton", "Aarong", "Maybelline", "LEGO"];
 
@@ -29,15 +23,28 @@ interface Props {
   filters: FilterState;
   onChange: (filters: Partial<FilterState>) => void;
   onReset: () => void;
+  hideCategoryFilter?: boolean;
 }
 
-export default function FilterSidebar({ filters, onChange, onReset }: Props) {
-  const hasActiveFilters =
-    filters.category || filters.minPrice || filters.brand;
+export default function FilterSidebar({ filters, onChange, onReset, hideCategoryFilter }: Props) {
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+
+  useEffect(() => {
+    if (hideCategoryFilter) return;
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCategories(data.map((c: any) => ({ label: c.name, value: c.slug })));
+        }
+      })
+      .catch(() => setCategories([]));
+  }, [hideCategoryFilter]);
+
+  const hasActiveFilters = filters.category || filters.minPrice || filters.brand;
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-gray-800 text-base">Filters</h3>
         {hasActiveFilters && (
@@ -50,31 +57,45 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
         )}
       </div>
 
-      {/* Category */}
-      <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">Category</h4>
-        <div className="space-y-1.5">
-          {CATEGORIES.map((cat) => (
-            <label key={cat.value} className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="radio"
-                name="category"
-                value={cat.value}
-                checked={filters.category === cat.value}
-                onChange={() => onChange({ category: cat.value })}
-                className="accent-[#2c2769]"
-              />
-              <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">
-                {cat.label}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
+      {!hideCategoryFilter && (
+        <>
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Category</h4>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="category"
+                  value=""
+                  checked={filters.category === ""}
+                  onChange={() => onChange({ category: "" })}
+                  className="accent-[#2c2769]"
+                />
+                <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">
+                  All Categories
+                </span>
+              </label>
+              {categories.map((cat) => (
+                <label key={cat.value} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="category"
+                    value={cat.value}
+                    checked={filters.category === cat.value}
+                    onChange={() => onChange({ category: cat.value })}
+                    className="accent-[#2c2769]"
+                  />
+                  <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">
+                    {cat.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <hr className="border-gray-100" />
+        </>
+      )}
 
-      <hr className="border-gray-100" />
-
-      {/* Price Range */}
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-3">Price Range</h4>
         <div className="space-y-1.5">
@@ -92,7 +113,6 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
               </span>
             </label>
           ))}
-          {/* Clear price */}
           {filters.minPrice && (
             <button
               onClick={() => onChange({ minPrice: "", maxPrice: "" })}
@@ -103,7 +123,6 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
           )}
         </div>
 
-        {/* Custom Price */}
         <div className="mt-3 flex items-center gap-2">
           <input
             type="number"
@@ -125,7 +144,6 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
 
       <hr className="border-gray-100" />
 
-      {/* Brand */}
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-3">Brand</h4>
         <div className="space-y-1.5">
@@ -134,9 +152,7 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
               <input
                 type="checkbox"
                 checked={filters.brand === brand}
-                onChange={() =>
-                  onChange({ brand: filters.brand === brand ? "" : brand })
-                }
+                onChange={() => onChange({ brand: filters.brand === brand ? "" : brand })}
                 className="accent-[#2c2769]"
               />
               <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">
@@ -149,7 +165,6 @@ export default function FilterSidebar({ filters, onChange, onReset }: Props) {
 
       <hr className="border-gray-100" />
 
-      {/* Rating Filter */}
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-3">Min Rating</h4>
         <div className="space-y-1.5">
