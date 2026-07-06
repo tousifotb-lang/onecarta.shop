@@ -58,11 +58,11 @@ export default function CategoryGrid() {
       </div>
 
       {loading ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-4 overflow-x-auto pb-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 min-w-[64px]">
-              <div className="w-14 h-14 rounded-full bg-gray-100 animate-pulse" />
-              <div className="w-10 h-2.5 rounded bg-gray-100 animate-pulse" />
+            <div key={i} className="flex flex-col items-center gap-2 min-w-[88px]">
+              <div className="w-20 h-20 rounded-full bg-gray-100 animate-pulse" />
+              <div className="w-14 h-2.5 rounded bg-gray-100 animate-pulse" />
             </div>
           ))}
         </div>
@@ -73,16 +73,16 @@ export default function CategoryGrid() {
           onMouseUp={stopDragging}
           onMouseLeave={stopDragging}
           onMouseMove={handleMouseMove}
-          className="flex items-start gap-3 overflow-x-auto pb-2 scrollbar-hide cursor-grab select-none"
+          className="flex items-start gap-4 sm:gap-5 overflow-x-auto pb-2 scrollbar-hide cursor-grab select-none"
         >
           {categories.map((cat) => (
             <Link
               key={cat._id}
               href={`/category/${cat.slug}`}
               draggable={false}
-              className="flex flex-col items-center gap-1.5 group flex-shrink-0 w-16"
+              className="flex flex-col items-center gap-2 group flex-shrink-0 w-20 sm:w-24"
             >
-              <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 shadow-sm bg-gray-50 flex items-center justify-center transition-transform group-hover:scale-105 group-hover:shadow-md pointer-events-none">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border border-gray-100 shadow-sm bg-gray-50 flex items-center justify-center transition-transform group-hover:scale-105 group-hover:shadow-md pointer-events-none">
                 {cat.image ? (
                   <img
                     src={cat.image}
@@ -91,10 +91,10 @@ export default function CategoryGrid() {
                     draggable={false}
                   />
                 ) : (
-                  <span className="text-xl">{cat.icon || "🛍️"}</span>
+                  <span className="text-3xl sm:text-4xl">{cat.icon || "🛍️"}</span>
                 )}
               </div>
-              <span className="text-[11px] font-semibold text-gray-700 text-center leading-tight w-full truncate">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 text-center leading-tight w-full truncate">
                 {cat.name}
               </span>
             </Link>
