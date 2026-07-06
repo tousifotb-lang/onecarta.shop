@@ -11,17 +11,6 @@ interface CategoryItem {
   image?: string;
 }
 
-const FALLBACK_COLORS = [
-  "bg-blue-50 hover:bg-blue-100",
-  "bg-pink-50 hover:bg-pink-100",
-  "bg-yellow-50 hover:bg-yellow-100",
-  "bg-green-50 hover:bg-green-100",
-  "bg-orange-50 hover:bg-orange-100",
-  "bg-rose-50 hover:bg-rose-100",
-  "bg-purple-50 hover:bg-purple-100",
-  "bg-indigo-50 hover:bg-indigo-100",
-];
-
 export default function CategoryGrid() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,31 +33,36 @@ export default function CategoryGrid() {
       </div>
 
       {loading ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-4 overflow-x-auto pb-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="min-w-[85px] h-[90px] bg-gray-100 rounded-2xl animate-pulse" />
+            <div key={i} className="flex flex-col items-center gap-2 min-w-[72px]">
+              <div className="w-16 h-16 rounded-full bg-gray-100 animate-pulse" />
+              <div className="w-12 h-2.5 rounded bg-gray-100 animate-pulse" />
+            </div>
           ))}
         </div>
       ) : categories.length === 0 ? null : (
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 md:pb-0 md:grid md:grid-cols-8 md:overflow-x-visible scrollbar-hide snap-x snap-mandatory">
-          {categories.map((cat, idx) => (
+        <div className="flex items-center gap-4 sm:gap-5 overflow-x-auto pb-2 md:pb-0 md:grid md:grid-cols-8 md:overflow-x-visible scrollbar-hide snap-x snap-mandatory">
+          {categories.map((cat) => (
             <Link
               key={cat._id}
               href={`/category/${cat.slug}`}
-              className={`${FALLBACK_COLORS[idx % FALLBACK_COLORS.length]} rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md hover:-translate-y-0.5 group min-w-[85px] md:min-w-0 snap-center flex-shrink-0`}
+              className="flex flex-col items-center gap-2 group min-w-[72px] md:min-w-0 snap-center flex-shrink-0"
             >
-              {cat.image ? (
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-8 h-8 md:w-10 md:h-10 object-cover rounded-lg group-hover:scale-110 transition-transform"
-                />
-              ) : (
-                <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">
-                  {cat.icon || "🛍️"}
-                </span>
-              )}
-              <span className="text-[11px] md:text-xs font-bold text-gray-700 text-center leading-tight whitespace-nowrap md:whitespace-normal">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border border-gray-100 shadow-sm bg-gray-50 flex items-center justify-center transition-transform group-hover:scale-105 group-hover:shadow-md">
+                {cat.image ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl md:text-3xl">
+                    {cat.icon || "🛍️"}
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] md:text-xs font-semibold text-gray-700 text-center leading-tight whitespace-nowrap">
                 {cat.name}
               </span>
             </Link>
