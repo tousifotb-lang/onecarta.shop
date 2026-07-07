@@ -161,30 +161,30 @@ function CategoryPageContent() {
       </div>
 
       {subCategories.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-3">Browse {category.name}</h2>
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-8 md:overflow-x-visible scrollbar-hide">
-            {subCategories.map((sub) => (
-              <Link
-                key={sub._id}
-                href={`/category/${sub.slug}`}
-                className="bg-[#eeedf5] hover:bg-[#e0defa] rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md hover:-translate-y-0.5 group min-w-[85px] md:min-w-0 flex-shrink-0"
-              >
+      <div className="mb-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-3">Browse {category.name}</h2>
+        <div className="flex items-start gap-4 sm:gap-5 overflow-x-auto pb-2 scrollbar-hide">
+          {subCategories.map((sub) => (
+            <Link
+              key={sub._id}
+              href={`/category/${sub.slug}`}
+              className="flex flex-col items-center gap-2 group flex-shrink-0 w-20 sm:w-24"
+            >
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border border-gray-100 shadow-sm bg-gray-50 flex items-center justify-center transition-transform group-hover:scale-105 group-hover:shadow-md">
                 {sub.image ? (
-                  <img src={sub.image} alt={sub.name} className="w-8 h-8 md:w-10 md:h-10 object-cover rounded-lg" />
+                  <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">
-                    {sub.icon || "🛍️"}
-                  </span>
+                  <span className="text-3xl sm:text-4xl">{sub.icon || "🛍️"}</span>
                 )}
-                <span className="text-[11px] md:text-xs font-bold text-gray-700 text-center leading-tight">
-                  {sub.name}
-                </span>
-              </Link>
-            ))}
-          </div>
+              </div>
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 text-center leading-tight w-full truncate">
+                {sub.name}
+              </span>
+            </Link>
+          ))}
         </div>
-      )}
+      </div>
+    )}
 
       <div className="flex gap-6">
         <aside className="hidden lg:block w-64 flex-shrink-0">
