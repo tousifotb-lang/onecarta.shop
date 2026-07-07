@@ -16,8 +16,6 @@ interface TreeNode extends RawCategory {
   children: TreeNode[];
 }
 
-const BRANDS = ["Apple", "Samsung", "Sony", "Nike", "Walton", "Aarong", "Maybelline", "LEGO"];
-
 const PRICE_RANGES = [
   { label: "Under ৳500", min: "0", max: "500" },
   { label: "৳500 - ৳2,000", min: "500", max: "2000" },
@@ -30,8 +28,9 @@ interface Props {
   filters: FilterState;
   onChange: (filters: Partial<FilterState>) => void;
   onReset: () => void;
-  mode?: "filter" | "navigate"; // "filter" = /products page, "navigate" = /category page
+  mode?: "filter" | "navigate";
   activeSlug?: string;
+  categoryId?: string;
 }
 
 function buildTree(flat: RawCategory[]): TreeNode[] {
@@ -95,8 +94,9 @@ function CategoryTreeNode({
   );
 }
 
-export default function FilterSidebar({ filters, onChange, onReset, mode = "filter", activeSlug }: Props) {
+export default function FilterSidebar({ filters, onChange, onReset, mode = "filter", activeSlug, categoryId }: Props) {
   const [categories, setCategories] = useState<RawCategory[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/categories?all=true")
@@ -111,6 +111,21 @@ export default function FilterSidebar({ filters, onChange, onReset, mode = "filt
       })
       .catch(() => setCategories([]));
   }, []);
+
+  // Only show brands that actually exist among the relevant products —
+  // Fashion won't show Electronics brands, and vice versa, automatically.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (mode === "navigate" && categoryId) {
+      params.set("categoryId", categoryId);
+    } else if (mode === "filter" && filters.category) {
+      params.set("category", filters.category);
+    }
+    fetch(`/api/products/facets?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => setBrands(Array.isArray(data.brands) ? data.brands : []))
+      .catch(() => setBrands([]));
+  }, [mode, categoryId, filters.category]);
 
   const tree = useMemo(() => buildTree(categories), [categories]);
   const expandedIds = useMemo(() => new Set(findPathToActive(tree, activeSlug)), [tree, activeSlug]);
@@ -167,19 +182,27 @@ export default function FilterSidebar({ filters, onChange, onReset, mode = "filt
         </div>
       </div>
 
-      <hr className="border-gray-100" />
-
-      <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">Brand</h4>
-        <div className="space-y-1.5">
-          {BRANDS.map((brand) => (
-            <label key={brand} className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" checked={filters.brand === brand} onChange={() => onChange({ brand: filters.brand === brand ? "" : brand })} className="accent-[#2c2769]" />
-              <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">{brand}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      {brands.length > 0 && (
+        <>
+          <hr className="border-gray-100" />
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Brand</h4>
+            <div className="space-y-1.5">
+              {brands.map((brand) => (
+                <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={filters.brand === brand}
+                    onChange={() => onChange({ brand: filters.brand === brand ? "" : brand })}
+                    className="accent-[#2c2769]"
+                  />
+                  <span className="text-sm text-gray-600 group-hover:text-[#2c2769] transition-colors">{brand}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <hr className="border-gray-100" />
 

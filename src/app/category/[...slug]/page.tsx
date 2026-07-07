@@ -188,7 +188,7 @@ function CategoryPageContent() {
 
       <div className="flex gap-6">
         <aside className="hidden lg:block w-64 flex-shrink-0">
-          <FilterSidebar filters={filters} onChange={handleFilterChange} onReset={handleReset} mode="navigate" activeSlug={currentSlug} />
+          <FilterSidebar filters={filters} onChange={handleFilterChange} onReset={handleReset} mode="navigate" activeSlug={currentSlug} categoryId={category._id} />
         </aside>
 
         <div className="flex-1 min-w-0">
@@ -260,7 +260,7 @@ function CategoryPageContent() {
               <h3 className="font-bold text-lg">Filters</h3>
               <button onClick={() => setShowMobileFilter(false)}><X size={20} /></button>
             </div>
-            <FilterSidebar filters={filters} onChange={handleFilterChange} onReset={handleReset} mode="navigate" activeSlug={currentSlug} />
+            <FilterSidebar filters={filters} onChange={handleFilterChange} onReset={handleReset} mode="navigate" activeSlug={currentSlug} categoryId={category._id} />
           </div>
         </div>
       )}
