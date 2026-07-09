@@ -251,139 +251,145 @@ useEffect(() => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <header className="w-full sticky top-0 z-50 overflow-visible">
+    <header className="w-full overflow-visible">
 
-      {/* ── Top Bar — desktop only ─────────────────────────────────────────── */}
-      <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
-        <div className="container-main flex items-center justify-between">
-          <div className="flex items-center gap-1 text-gray-600 font-medium">
-            <Phone size={12} />
-            <span>01303223513</span>
-          </div>
-          <div className="flex items-center gap-4 text-gray-600 font-medium">
-            <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]"><Package size={12} /> ORDER STATUS</Link>
-            <Link href="/gifts" className="flex items-center gap-1 hover:text-[#2c2769]"><Gift size={12} /> GIFT</Link>
-            <Link href="/blog" className="flex items-center gap-1 hover:text-[#2c2769]"><BookOpen size={12} /> BLOGS</Link>
-            <Link href="/emi" className="flex items-center gap-1 hover:text-[#2c2769]"><CreditCard size={12} /> EMI POLICY</Link>
-            <Link href="/store" className="flex items-center gap-1 hover:text-[#2c2769]"><Store size={12} /> STORE LOCATION</Link>
+      {/* ── Sticky Group: Top Bar + Main Navbar stay fixed on scroll ───────── */}
+      <div className="sticky top-0 z-50">
+
+        {/* ── Top Bar — desktop only ─────────────────────────────────────────── */}
+        <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
+          <div className="container-main flex items-center justify-between">
+            <div className="flex items-center gap-1 text-gray-600 font-medium">
+              <Phone size={12} />
+              <span>01303223513</span>
+            </div>
+            <div className="flex items-center gap-4 text-gray-600 font-medium">
+              <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]"><Package size={12} /> ORDER STATUS</Link>
+              <Link href="/gifts" className="flex items-center gap-1 hover:text-[#2c2769]"><Gift size={12} /> GIFT</Link>
+              <Link href="/blog" className="flex items-center gap-1 hover:text-[#2c2769]"><BookOpen size={12} /> BLOGS</Link>
+              <Link href="/emi" className="flex items-center gap-1 hover:text-[#2c2769]"><CreditCard size={12} /> EMI POLICY</Link>
+              <Link href="/store" className="flex items-center gap-1 hover:text-[#2c2769]"><Store size={12} /> STORE LOCATION</Link>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Main Navbar ────────────────────────────────────────────────────── */}
-      <div className="bg-[#1a1a2e] shadow-lg w-full">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2.5">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full flex-nowrap">
+        {/* ── Main Navbar ────────────────────────────────────────────────────── */}
+        <div className="bg-[#1a1a2e] shadow-lg w-full">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2.5">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full flex-nowrap">
 
-            {/* Logo */}
-            <Link href="/" className="flex-shrink-0 flex items-center">
-              <img
-                src="/logo/logo.png"
-                alt="onecarta logo"
-                className="h-[22px] sm:h-7 md:h-10 w-auto max-w-[75px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105"
-              />
-            </Link>
-
-            {/* Search */}
-            <div className="flex-1 min-w-0 w-full">
-              <SearchBar />
-            </div>
-
-            {/* Right Actions */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-
-              {/* Offer button */}
-              <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
-                <Gift size={13} /> OFFER
+              {/* Logo */}
+              <Link href="/" className="flex-shrink-0 flex items-center">
+                <img
+                  src="/logo/logo.png"
+                  alt="onecarta logo"
+                  className="h-[22px] sm:h-7 md:h-10 w-auto max-w-[75px] sm:max-w-[120px] md:max-w-none object-contain transition-transform hover:scale-105"
+                />
               </Link>
 
-              {/* ── Wishlist Button ──────────────────────────────────────── */}
-              <Link
-                href="/wishlist"
-                className="relative p-1 text-[#a8a6d9] md:text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                <Heart size={20} className="w-[19px] h-[19px] sm:w-4 sm:h-4" />
-                <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
-                {mounted && wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {wishlistCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* Cart Button — desktop only */}
-              <button
-                onClick={() => setCartOpen(true)}
-                className={`hidden md:flex relative p-1.5 items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${isAnimate ? "scale-110" : "scale-100"}`}
-              >
-                <ShoppingCart size={16} />
-                <span className="hidden lg:block text-xs font-bold">CART</span>
-                {mounted && totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{totalItems}</span>
-                )}
-              </button>
-
-              {/* Account Button — desktop only */}
-              <div className="hidden md:block">
-                {!isLoggedIn ? (
-                  <button
-                    onClick={openModal}
-                    className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <User size={16} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
-                  </button>
-                ) : (
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer"
-                    >
-                      <div className="w-7 h-7 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs shadow-inner uppercase">
-                        {userName[0]}
-                      </div>
-                      <ChevronDown size={12} className={`text-gray-300 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {isDropdownOpen && (
-                      <div className="absolute right-0 mt-2.5 w-52 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[9999] text-gray-800">
-                        <div className="px-4 py-2 border-b border-gray-50">
-                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Welcome back</p>
-                          <p className="text-xs font-extrabold text-gray-700 truncate capitalize">{userName}</p>
-                        </div>
-                        <div className="p-1 space-y-0.5">
-                          <button
-                            onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl text-left"
-                          >
-                            <User size={14} className="text-gray-400" />View Profile
-                          </button>
-                          <button
-                            onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl text-left"
-                          >
-                            <LayoutDashboard size={14} className="text-gray-400" />Manage Account
-                          </button>
-                        </div>
-                        <div className="p-1 border-t border-gray-50 mt-1">
-                          <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl text-left"
-                          >
-                            <LogOut size={14} />Log Out
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+              {/* Search */}
+              <div className="flex-1 min-w-0 w-full">
+                <SearchBar />
               </div>
 
+              {/* Right Actions */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+
+                {/* Offer button */}
+                <Link href="/offers" className="hidden lg:flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                  <Gift size={13} /> OFFER
+                </Link>
+
+                {/* ── Wishlist Button ──────────────────────────────────────── */}
+                <Link
+                  href="/wishlist"
+                  className="relative p-1 text-[#a8a6d9] md:text-white md:border md:border-[#a8a6d9] md:hover:bg-[#a8a6d9] md:hover:text-[#1a1a2e] md:px-3 md:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <Heart size={20} className="w-[19px] h-[19px] sm:w-4 sm:h-4" />
+                  <span className="hidden lg:block text-xs font-bold">WISHLIST</span>
+                  {mounted && wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Cart Button — desktop only */}
+                <button
+                  onClick={() => setCartOpen(true)}
+                  className={`hidden md:flex relative p-1.5 items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${isAnimate ? "scale-110" : "scale-100"}`}
+                >
+                  <ShoppingCart size={16} />
+                  <span className="hidden lg:block text-xs font-bold">CART</span>
+                  {mounted && totalItems > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{totalItems}</span>
+                  )}
+                </button>
+
+                {/* Account Button — desktop only */}
+                <div className="hidden md:block">
+                  {!isLoggedIn ? (
+                    <button
+                      onClick={openModal}
+                      className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <User size={16} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
+                    </button>
+                  ) : (
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="flex items-center gap-1.5 p-1 md:px-2.5 md:py-1.5 border border-[#a8a6d9]/40 rounded-full hover:bg-white/10 transition-all cursor-pointer"
+                      >
+                        <div className="w-7 h-7 rounded-full bg-[#a8a6d9] text-[#1a1a2e] flex items-center justify-center font-bold text-xs shadow-inner uppercase">
+                          {userName[0]}
+                        </div>
+                        <ChevronDown size={12} className={`text-gray-300 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2.5 w-52 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[9999] text-gray-800">
+                          <div className="px-4 py-2 border-b border-gray-50">
+                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Welcome back</p>
+                            <p className="text-xs font-extrabold text-gray-700 truncate capitalize">{userName}</p>
+                          </div>
+                          <div className="p-1 space-y-0.5">
+                            <button
+                              onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl text-left"
+                            >
+                              <User size={14} className="text-gray-400" />View Profile
+                            </button>
+                            <button
+                              onClick={() => { setIsDropdownOpen(false); router.push("/dashboard"); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#2c2769] rounded-xl text-left"
+                            >
+                              <LayoutDashboard size={14} className="text-gray-400" />Manage Account
+                            </button>
+                          </div>
+                          <div className="p-1 border-t border-gray-50 mt-1">
+                            <button
+                              onClick={handleLogout}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl text-left"
+                            >
+                              <LogOut size={14} />Log Out
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── 3-Level Mega Menu Bar — desktop only ──────────────────────────── */}
+      </div>
+      {/* ── End Sticky Group ────────────────────────────────────────────────── */}
+
+      {/* ── 3-Level Mega Menu Bar — desktop only, NOT sticky, scrolls normally ─ */}
       <div className="bg-white text-gray-700 hidden md:block shadow-sm relative border-b border-gray-100">
         <div className="container-main flex items-center">
 
