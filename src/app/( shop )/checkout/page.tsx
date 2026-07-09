@@ -115,6 +115,12 @@ export default function CheckoutPage() {
     homeAddress: "",
   });
 
+  // Logged-in user er profile e kono saved address na thakle, checkout page e direct
+  // ei form dekhano hoy (guest form er moto). Checkbox diye customer chaile ei address
+  // ta profile e o save kore rakhte parbe future order er jonno.
+  const [saveAddressToProfile, setSaveAddressToProfile] = useState(true);
+  const [isSavingProfileAddress, setIsSavingProfileAddress] = useState(false);
+
   const [newAddressForm, setNewAddressForm] = useState({
     label: "Home",
     name: "",
@@ -369,6 +375,33 @@ export default function CheckoutPage() {
     }
   };
 
+  // Logged-in customer er profile e kono address save nai — checkout e nijer hate fill kora
+  // address ta, checkbox checked thakle, profile e o save kore deওয়া হয়। Eta best-effort:
+  // save fail korleo order placement block hoy na.
+  const trySaveAddressToProfile = async () => {
+    if (!isLoggedIn || savedAddresses.length > 0 || !saveAddressToProfile) return;
+
+    setIsSavingProfileAddress(true);
+    try {
+      await fetch("/api/users/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: "Home",
+          name: formData.name,
+          phone: formData.phone,
+          district: formData.district,
+          thana: formData.thana,
+          homeAddress: formData.homeAddress,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save address to profile:", err);
+    } finally {
+      setIsSavingProfileAddress(false);
+    }
+  };
+
   const handleSubmitOrder = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSubmitError("");
@@ -383,6 +416,9 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true);
+
+    // Address profile e save kora — order placement er age, best-effort (fail hole o order continue hobe)
+    await trySaveAddressToProfile();
 
     try {
       const payload = {
@@ -422,6 +458,76 @@ export default function CheckoutPage() {
   const filteredDistricts = districtList.filter((d) => d.toLowerCase().includes(districtSearch.toLowerCase()));
   const filteredThanas = (locationData[formData.district] || []).filter((t) => t.toLowerCase().includes(thanaSearch.toLowerCase()));
 
+  // "Full name / phone / district / thana / home address" input form — guest checkout ebong
+  // logged-in kintu profile e address save nei emon customer, dutor jonnoi common.
+  const renderAddressInputForm = () => (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-gray-600 uppercase">Full Name *</label>
+          <input type="text" required placeholder="Enter your full name" className="w-full p-3 border border-gray-200 focus:border-[#2c2769] rounded-xl text-sm focus:outline-none" value={formData.name} onChange={(e) => handleFieldChange("name", e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-gray-600 uppercase">Phone Number *</label>
+          <div className="flex rounded-xl border border-gray-200 focus-within:border-[#2c2769] overflow-hidden bg-white">
+            <span className="bg-gray-100 px-3 py-3 text-sm text-gray-500 font-bold border-r border-gray-200 flex items-center">+88</span>
+            <input type="tel" required placeholder="01XXXXXXXXX" className="w-full p-3 text-sm focus:outline-none bg-transparent" value={formData.phone} onChange={(e) => handleFieldChange("phone", e.target.value.replace(/\D/g, ""))} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5 relative" ref={districtRef}>
+          <label className="text-xs font-bold text-gray-600 uppercase">District *</label>
+          <div onClick={() => setIsDistrictOpen(!isDistrictOpen)} className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white flex justify-between items-center cursor-pointer">
+            <span className={formData.district ? "text-gray-800 font-medium" : "text-gray-400"}>{formData.district || "Select District"}</span>
+            <ChevronDown size={16} className="text-gray-400" />
+          </div>
+          {isDistrictOpen && (
+            <div className="absolute left-0 right-0 top-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-48 flex flex-col overflow-hidden">
+              <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
+                <Search size={14} className="text-gray-400" />
+                <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+              </div>
+              <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+                {filteredDistricts.map((d) => (
+                  <div key={d} onClick={() => { setFormData((p) => ({ ...p, district: d, thana: "" })); setIsDistrictOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{d}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5 relative" ref={thanaRef}>
+          <label className="text-xs font-bold text-gray-600 uppercase">Thana / Upazila *</label>
+          <div onClick={() => formData.district && setIsThanaOpen(!isThanaOpen)} className={`w-full p-3 border border-gray-200 rounded-xl text-sm flex justify-between items-center ${formData.district ? "bg-white cursor-pointer" : "bg-gray-50 cursor-not-allowed"}`}>
+            <span className={formData.thana ? "text-gray-800 font-medium" : "text-gray-400"}>{formData.thana || "Select Thana"}</span>
+            <ChevronDown size={16} className="text-gray-400" />
+          </div>
+          {isThanaOpen && formData.district && (
+            <div className="absolute left-0 right-0 top-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-48 flex flex-col overflow-hidden">
+              <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
+                <Search size={14} className="text-gray-400" />
+                <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={thanaSearch} onChange={(e) => setThanaSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+              </div>
+              <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+                {filteredThanas.map((t) => (
+                  <div key={t} onClick={() => { handleFieldChange("thana", t); setIsThanaOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{t}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-gray-600 uppercase">House / Road / Street Details *</label>
+        <textarea required rows={2} placeholder="House No. 12, Road No. 4..." className="w-full p-3 border border-gray-200 focus:border-[#2c2769] rounded-xl text-sm focus:outline-none" value={formData.homeAddress} onChange={(e) => handleFieldChange("homeAddress", e.target.value)} />
+      </div>
+    </>
+  );
+
   return (
     <div className="container-main py-6 pb-24 md:pb-8">
       <h1 className="text-2xl font-extrabold text-gray-900 mb-6">Checkout</h1>
@@ -436,7 +542,15 @@ export default function CheckoutPage() {
 
         <div className="lg:col-span-2 space-y-6">
 
-          {isLoggedIn ? (
+          {isLoggedIn && loadingAddresses ? (
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="text-xs text-gray-400 font-semibold p-4 text-center flex items-center justify-center gap-2">
+                <Loader2 size={14} className="animate-spin" /> Loading addresses...
+              </div>
+            </div>
+          ) : isLoggedIn && savedAddresses.length > 0 ? (
+
+            /* CASE 1: Logged in, profile e ekta+ address save kora ache — radio list + "+" diye notun add */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-gray-50">
                 <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -446,28 +560,47 @@ export default function CheckoutPage() {
                 <button type="button" onClick={() => setIsAddressModalOpen(true)} className="p-1.5 bg-[#eeedf5] text-[#2c2769] hover:bg-[#2c2769] hover:text-white rounded-lg transition-all"><Plus size={16} /></button>
               </div>
 
-              {loadingAddresses ? (
-                <div className="text-xs text-gray-400 font-semibold p-4 text-center flex items-center justify-center gap-2">
-                  <Loader2 size={14} className="animate-spin" /> Loading addresses...
-                </div>
-              ) : savedAddresses.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2.5">
-                  {savedAddresses.map((addr) => (
-                    <label key={addr._id} className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${selectedPresentAddress === addr._id ? "border-[#2c2769] bg-[#eeedf5]/20" : "border-gray-100 bg-gray-50/30 hover:bg-gray-50/80"}`}>
-                      <input type="radio" name="presentAddress" value={addr._id} checked={selectedPresentAddress === addr._id} onChange={() => handleAddressSelect(addr._id)} className="mt-0.5 accent-[#2c2769]" />
-                      <div className="text-xs space-y-0.5">
-                        <span className="bg-[#2c2769] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase mb-1 inline-block">{addr.label}</span>
-                        <p className="font-bold text-gray-800">{addr.name} — <span className="text-gray-500">{addr.phone}</span></p>
-                        <p className="text-gray-400 font-semibold">{addr.homeAddress}, {addr.thana}, {addr.district}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 font-semibold bg-gray-50 p-4 rounded-xl text-center border border-dashed border-gray-200">No address profiles found. Click the + icon to add a new address!</div>
-              )}
+              <div className="grid grid-cols-1 gap-2.5">
+                {savedAddresses.map((addr) => (
+                  <label key={addr._id} className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${selectedPresentAddress === addr._id ? "border-[#2c2769] bg-[#eeedf5]/20" : "border-gray-100 bg-gray-50/30 hover:bg-gray-50/80"}`}>
+                    <input type="radio" name="presentAddress" value={addr._id} checked={selectedPresentAddress === addr._id} onChange={() => handleAddressSelect(addr._id)} className="mt-0.5 accent-[#2c2769]" />
+                    <div className="text-xs space-y-0.5">
+                      <span className="bg-[#2c2769] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase mb-1 inline-block">{addr.label}</span>
+                      <p className="font-bold text-gray-800">{addr.name} — <span className="text-gray-500">{addr.phone}</span></p>
+                      <p className="text-gray-400 font-semibold">{addr.homeAddress}, {addr.thana}, {addr.district}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
+
+          ) : isLoggedIn && savedAddresses.length === 0 ? (
+
+            /* CASE 2: Logged in, kintu profile e kono address save nai — direct fill-in form dekhano hocche */
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
+                <Truck size={18} className="text-[#2c2769]" />
+                <span>Shipping Address Details</span>
+              </h2>
+
+              {renderAddressInputForm()}
+
+              <label className="flex items-start gap-2.5 bg-[#eeedf5]/30 border border-[#2c2769]/10 rounded-xl p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveAddressToProfile}
+                  onChange={(e) => setSaveAddressToProfile(e.target.checked)}
+                  className="mt-0.5 accent-[#2c2769] cursor-pointer"
+                />
+                <span className="text-xs text-gray-600 font-semibold leading-relaxed">
+                  Save this address to my profile for faster checkout next time.
+                </span>
+              </label>
+            </div>
+
           ) : (
+
+            /* CASE 3: Guest (not logged in) */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
                 <Truck size={18} className="text-[#2c2769]" />
@@ -479,69 +612,7 @@ export default function CheckoutPage() {
                 <button type="button" onClick={openModal} className="font-black underline shrink-0">Sign In</button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-600 uppercase">Full Name *</label>
-                  <input type="text" required placeholder="Enter your full name" className="w-full p-3 border border-gray-200 focus:border-[#2c2769] rounded-xl text-sm focus:outline-none" value={formData.name} onChange={(e) => handleFieldChange("name", e.target.value)} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-600 uppercase">Phone Number *</label>
-                  <div className="flex rounded-xl border border-gray-200 focus-within:border-[#2c2769] overflow-hidden bg-white">
-                    <span className="bg-gray-100 px-3 py-3 text-sm text-gray-500 font-bold border-r border-gray-200 flex items-center">+88</span>
-                    <input type="tel" required placeholder="01XXXXXXXXX" className="w-full p-3 text-sm focus:outline-none bg-transparent" value={formData.phone} onChange={(e) => handleFieldChange("phone", e.target.value.replace(/\D/g, ""))} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5 relative" ref={districtRef}>
-                  <label className="text-xs font-bold text-gray-600 uppercase">District *</label>
-                  <div onClick={() => setIsDistrictOpen(!isDistrictOpen)} className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white flex justify-between items-center cursor-pointer">
-                    <span className={formData.district ? "text-gray-800 font-medium" : "text-gray-400"}>{formData.district || "Select District"}</span>
-                    <ChevronDown size={16} className="text-gray-400" />
-                  </div>
-                  {isDistrictOpen && (
-                    <div className="absolute left-0 right-0 top-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-48 flex flex-col overflow-hidden">
-                      <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
-                        <Search size={14} className="text-gray-400" />
-                        <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
-                      </div>
-                      <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                        {filteredDistricts.map((d) => (
-                          <div key={d} onClick={() => { setFormData((p) => ({ ...p, district: d, thana: "" })); setIsDistrictOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{d}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 relative" ref={thanaRef}>
-                  <label className="text-xs font-bold text-gray-600 uppercase">Thana / Upazila *</label>
-                  <div onClick={() => formData.district && setIsThanaOpen(!isThanaOpen)} className={`w-full p-3 border border-gray-200 rounded-xl text-sm flex justify-between items-center ${formData.district ? "bg-white cursor-pointer" : "bg-gray-50 cursor-not-allowed"}`}>
-                    <span className={formData.thana ? "text-gray-800 font-medium" : "text-gray-400"}>{formData.thana || "Select Thana"}</span>
-                    <ChevronDown size={16} className="text-gray-400" />
-                  </div>
-                  {isThanaOpen && formData.district && (
-                    <div className="absolute left-0 right-0 top-[105%] bg-white border border-gray-100 shadow-xl rounded-xl z-30 max-h-48 flex flex-col overflow-hidden">
-                      <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50">
-                        <Search size={14} className="text-gray-400" />
-                        <input type="text" placeholder="Search..." className="w-full bg-transparent text-xs focus:outline-none" value={thanaSearch} onChange={(e) => setThanaSearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
-                      </div>
-                      <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                        {filteredThanas.map((t) => (
-                          <div key={t} onClick={() => { handleFieldChange("thana", t); setIsThanaOpen(false); }} className="p-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer">{t}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase">House / Road / Street Details *</label>
-                <textarea required rows={2} placeholder="House No. 12, Road No. 4..." className="w-full p-3 border border-gray-200 focus:border-[#2c2769] rounded-xl text-sm focus:outline-none" value={formData.homeAddress} onChange={(e) => handleFieldChange("homeAddress", e.target.value)} />
-              </div>
+              {renderAddressInputForm()}
             </div>
           )}
 
