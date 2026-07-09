@@ -2,6 +2,47 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import PromoCode from "@/models/PromoCode";
 
+// Calculates the taka discount for a given promo + cart subtotal.
+// Returns { discount } on success, or { error } if the order doesn't qualify.
+function calculateDiscount(
+  promo: {
+    discountType: "flat" | "upto";
+    flatAmount: string;
+    basePercentage: string;
+    maxDiscountValue: string;
+    hasMinPurchase: boolean;
+    minPurchaseValue: string;
+  },
+  subtotal: number
+): { discount: number } | { error: string } {
+  if (promo.discountType === "flat") {
+    const minPurchase = promo.hasMinPurchase ? Number(promo.minPurchaseValue) || 0 : 0;
+    if (minPurchase > 0 && subtotal < minPurchase) {
+      return { error: `Minimum purchase of ৳${minPurchase} required for this coupon.` };
+    }
+    return { discount: Number(promo.flatAmount) || 0 };
+  }
+
+  // discountType === "upto" — scaling percentage, capped at maxDiscountValue
+  const minPurchase = Number(promo.minPurchaseValue) || 0;
+  const maxDiscount = Number(promo.maxDiscountValue) || 0;
+  const basePercentage = Number(promo.basePercentage) || 0;
+
+  if (minPurchase <= 0 || maxDiscount <= 0 || basePercentage <= 0) {
+    return { error: "This coupon is misconfigured. Please contact support." };
+  }
+
+  if (subtotal < minPurchase) {
+    return { error: `Minimum purchase of ৳${minPurchase} required for this coupon.` };
+  }
+
+  // Order jotoi min purchase theke baray, effective % totoi barbe — kintu maxDiscount cross korbe na
+  const effectivePercent = basePercentage * (subtotal / minPurchase);
+  const discount = Math.min((maxDiscount * effectivePercent) / 100, maxDiscount);
+
+  return { discount };
+}
+
 // POST: Validate a promo code entered at checkout against the shared
 // `promocodes` collection (same MongoDB database the admin panel writes to).
 //
@@ -26,12 +67,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: "Invalid coupon code." }, { status: 404 });
     }
 
-    // Respect the admin "isActive" flag if it has been turned off
     if (promo.isActive === false) {
       return NextResponse.json({ valid: false, error: "This coupon is no longer active." }, { status: 400 });
     }
 
-    // Expiry check — expiryDate is stored as a plain "YYYY-MM-DD" string, or "" for no expiry
+    // Expiry check — expiryDate stored as "YYYY-MM-DD" string, or "" for no expiry
     if (promo.expiryDate) {
       const expiry = new Date(promo.expiryDate + "T23:59:59");
       if (!isNaN(expiry.getTime()) && expiry.getTime() < Date.now()) {
@@ -39,36 +79,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Min purchase check
-    const minPurchase = promo.hasMinPurchase ? Number(promo.minPurchaseValue) || 0 : 0;
     const cartSubtotal = Number(subtotal) || 0;
-    if (minPurchase > 0 && cartSubtotal < minPurchase) {
-      return NextResponse.json(
-        { valid: false, error: `Minimum purchase of ৳${minPurchase} required for this coupon.` },
-        { status: 400 }
-      );
-    }
 
-    // Calculate discount: either a flat amount or a percentage of the subtotal,
-    // capped by maxDiscountValue if that option is enabled.
-    let discount = 0;
-    if (promo.percentage) {
-      const pct = Number(promo.percentage) || 0;
-      discount = (cartSubtotal * pct) / 100;
-    } else if (promo.amount) {
-      discount = Number(promo.amount) || 0;
-    }
+    const result = calculateDiscount(
+      {
+        discountType: promo.discountType || "flat",
+        flatAmount: promo.flatAmount || "",
+        basePercentage: promo.basePercentage || "",
+        maxDiscountValue: promo.maxDiscountValue || "",
+        hasMinPurchase: !!promo.hasMinPurchase,
+        minPurchaseValue: promo.minPurchaseValue || "",
+      },
+      cartSubtotal
+    );
 
-    if (promo.hasMaxDiscount) {
-      const maxDiscount = Number(promo.maxDiscountValue) || 0;
-      if (maxDiscount > 0) {
-        discount = Math.min(discount, maxDiscount);
-      }
+    if ("error" in result) {
+      return NextResponse.json({ valid: false, error: result.error }, { status: 400 });
     }
 
     // Never let the discount exceed what's actually being charged
     const chargeable = cartSubtotal + (Number(deliveryCharge) || 0);
-    discount = Math.min(discount, chargeable);
+    let discount = Math.min(result.discount, chargeable);
     discount = Math.round(discount);
 
     if (discount <= 0) {

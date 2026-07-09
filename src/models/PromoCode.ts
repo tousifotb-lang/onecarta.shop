@@ -2,9 +2,9 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPromoCode extends Document {
   codeName: string;
-  amount: string;
-  percentage: string;
-  hasMaxDiscount: boolean;
+  discountType: "flat" | "upto";
+  flatAmount: string;
+  basePercentage: string;
   maxDiscountValue: string;
   hasMinPurchase: boolean;
   minPurchaseValue: string;
@@ -12,17 +12,15 @@ export interface IPromoCode extends Document {
   isActive: boolean;
 }
 
-// NOTE: This model intentionally mirrors the exact field names and types
-// (mostly strings) used by the separate OneCarta admin project, which writes
-// directly to the "promocodes" collection via the raw MongoDB driver. Keeping
-// the shape identical means documents created by the admin panel are read
-// correctly here, and vice versa.
+// NOTE: mirrors the exact field names/types used by the admin project
+// (raw MongoDB driver, "promocodes" collection). Keeping shapes identical
+// so documents created in admin read correctly here, and vice versa.
 const PromoCodeSchema = new Schema<IPromoCode>(
   {
     codeName: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    amount: { type: String, default: "" },
-    percentage: { type: String, default: "" },
-    hasMaxDiscount: { type: Boolean, default: false },
+    discountType: { type: String, enum: ["flat", "upto"], default: "flat" },
+    flatAmount: { type: String, default: "" },
+    basePercentage: { type: String, default: "" },
     maxDiscountValue: { type: String, default: "" },
     hasMinPurchase: { type: Boolean, default: false },
     minPurchaseValue: { type: String, default: "" },
