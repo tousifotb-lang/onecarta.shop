@@ -24,7 +24,7 @@ export default function HeroBanner() {
         const res = await fetch("/api/banners?activeOnly=true");
         const data: Banner[] = await res.json();
         setSlides(data.filter((b) => b.type === "hero"));
-        setSideBanners(data.filter((b) => b.type === "side"));
+        setSideBanners(data.filter((b) => b.type === "side").slice(0, 2));
       } catch (err) {
         console.error("Failed to load banners", err);
       } finally {
@@ -45,7 +45,6 @@ export default function HeroBanner() {
   const prev = () => setCurrent((c) => (c - 1 + slides.length) % slides.length);
   const next = () => setCurrent((c) => (c + 1) % slides.length);
 
-  // Nothing to show and we're done loading — don't render an empty section
   if (!isLoading && slides.length === 0 && sideBanners.length === 0) {
     return null;
   }
@@ -68,11 +67,15 @@ export default function HeroBanner() {
                 <Link
                   key={slide._id}
                   href={slide.href}
-                  className="h-full block cursor-pointer"
+                  className="relative h-full block cursor-pointer"
                   style={{ width: `${100 / slides.length}%` }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={slide.imageUrl} alt={slide.title || "Banner"} className="w-full h-full object-cover" />
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title || "Banner"}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 </Link>
               ))}
             </div>
@@ -108,17 +111,21 @@ export default function HeroBanner() {
         )}
       </div>
 
-      {/* Right — Side Banners */}
+      {/* Right — Side Banners (max 2, upper + lower) */}
       {sideBanners.length > 0 && (
-        <div className="grid grid-cols-2 lg:flex lg:flex-col gap-4">
+        <div className="grid grid-cols-2 lg:flex lg:flex-col gap-4 lg:h-48 sm:lg:h-64 md:lg:h-80 lg:h-96">
           {sideBanners.map((banner) => (
             <Link
               key={banner._id}
               href={banner.href}
-              className="rounded-2xl overflow-hidden block cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 h-24 sm:h-32 lg:h-auto lg:flex-1"
+              className="relative rounded-2xl overflow-hidden block cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 h-24 sm:h-32 lg:h-auto lg:flex-1 lg:min-h-0"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={banner.imageUrl} alt={banner.title || "Banner"} className="w-full h-full object-cover" />
+              <img
+                src={banner.imageUrl}
+                alt={banner.title || "Banner"}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </Link>
           ))}
         </div>
