@@ -25,6 +25,7 @@ export interface IOrder extends Document {
   deliveryCharge: number;
   discountPercent: number;
   discountAmount: number;
+  couponCode?: string; // NEW — the actual field used for per-user usage-limit counting
   vatPercent: number;
   vatAmount: number;
   itemsSubtotal: number;
@@ -74,6 +75,10 @@ const OrderSchema = new Schema<IOrder>(
     deliveryCharge: { type: Number, default: 0 },
     discountPercent: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
+    // Normalized (trim + uppercase) promo code actually applied to this order.
+    // This is the field per-user usage-limit counting queries against — it must
+    // always be saved as its own field, never just mentioned inside `note`.
+    couponCode: { type: String, default: null },
     vatPercent: { type: Number, default: 0 },
     vatAmount: { type: Number, default: 0 },
     itemsSubtotal: { type: Number, default: 0 },
