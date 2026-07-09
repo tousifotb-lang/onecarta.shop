@@ -8,6 +8,8 @@ export interface IPromoCode extends Document {
   maxDiscountValue: string;
   hasMinPurchase: boolean;
   minPurchaseValue: string;
+  hasUsageLimit: boolean;
+  usageLimitPerUser: string;
   expiryDate: string;
   isActive: boolean;
 }
@@ -24,6 +26,8 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     maxDiscountValue: { type: String, default: "" },
     hasMinPurchase: { type: Boolean, default: false },
     minPurchaseValue: { type: String, default: "" },
+    hasUsageLimit: { type: Boolean, default: false },
+    usageLimitPerUser: { type: String, default: "" },
     expiryDate: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },

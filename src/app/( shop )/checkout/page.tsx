@@ -245,7 +245,15 @@ export default function CheckoutPage() {
   const deliveryCharge = getDeliveryCharge();
   const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
-  const validateCoupon = async (code: string, currentSubtotal: number, currentDeliveryCharge: number | null) => {
+  // NEW: phone param add kora holo — per-user coupon usage limit check korar jonno
+  // backend e phone number pathano lagbe. Phone empty thakleo call korte kono somossha
+  // nai, backend e eta gracefully skip hoy (limit check shudhu phone thakle hoy).
+  const validateCoupon = async (
+    code: string,
+    currentSubtotal: number,
+    currentDeliveryCharge: number | null,
+    phone: string
+  ) => {
     const res = await fetch("/api/promo-codes/validate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -253,6 +261,7 @@ export default function CheckoutPage() {
         code,
         subtotal: currentSubtotal,
         deliveryCharge: currentDeliveryCharge ?? 0,
+        phone,
       }),
     });
     return res.json() as Promise<{ valid: boolean; code?: string; discount?: number; error?: string }>;
@@ -273,7 +282,7 @@ export default function CheckoutPage() {
 
     setIsApplyingCoupon(true);
     try {
-      const data = await validateCoupon(code, basePrice, deliveryCharge);
+      const data = await validateCoupon(code, basePrice, deliveryCharge, formData.phone);
       if (data.valid && data.code && typeof data.discount === "number") {
         setAppliedCoupon(data.code);
         setDiscount(data.discount);
@@ -300,7 +309,7 @@ export default function CheckoutPage() {
     if (reapplyTimerRef.current) clearTimeout(reapplyTimerRef.current);
     reapplyTimerRef.current = setTimeout(async () => {
       try {
-        const data = await validateCoupon(appliedCoupon, basePrice, deliveryCharge);
+        const data = await validateCoupon(appliedCoupon, basePrice, deliveryCharge, formData.phone);
         if (data.valid && typeof data.discount === "number") {
           setDiscount(data.discount);
         } else {
