@@ -19,6 +19,7 @@ export interface IProduct extends Document {
   isActive: boolean;
   isFeatured: boolean;
   isFlashSale: boolean;
+  isBestSelling: boolean;
   flashSalePrice?: number;
   flashSaleEnds?: Date;
 }
@@ -43,6 +44,7 @@ const ProductSchema = new Schema<IProduct>(
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
     isFlashSale: { type: Boolean, default: false },
+    isBestSelling: { type: Boolean, default: false },
     flashSalePrice: { type: Number },
     flashSaleEnds: { type: Date },
   },
