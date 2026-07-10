@@ -3,15 +3,56 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, X } from "lucide-react";
+import { Search, X, Loader2, Clock, TrendingUp } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
-const frontendProductsDB = [
-  { _id: "1", name: "Men's Casual Polo Shirt", price: 599, image: "https://placehold.co/400x400/2c2769/white?text=Polo+Shirt", category: "fashion" },
-  { _id: "2", name: "Bashundhara A4 Paper (500 sheets)", price: 450, image: "https://placehold.co/400x400/2c2769/white?text=A4+Paper", category: "books" },
-  { _id: "3", name: "Wireless Bluetooth Headphones", price: 1250, image: "https://placehold.co/400x400/2c2769/white?text=Headphones", category: "electronics" },
-  { _id: "4", name: "Premium Leather Wallet", price: 890, image: "https://placehold.co/400x400/2c2769/white?text=Wallet", category: "fashion" }
-];
+interface SearchProduct {
+  _id: string;
+  name?: string;
+  title?: string;
+  slug: string;
+  price: number;
+  category?: string;
+  images?: unknown[];
+}
+
+function getImageUrl(img: unknown): string {
+  if (typeof img === "string") return img;
+  if (img && typeof img === "object" && "url" in img) {
+    return (img as { url: string }).url;
+  }
+  return "";
+}
+
+const RECENT_SEARCHES_KEY = "onecarta_recent_searches";
+const MAX_RECENT_SEARCHES = 5;
+
+function getRecentSearches(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentSearch(term: string) {
+  if (typeof window === "undefined") return;
+  const trimmed = term.trim();
+  if (!trimmed) return;
+
+  const existing = getRecentSearches().filter(
+    (t) => t.toLowerCase() !== trimmed.toLowerCase()
+  );
+  const updated = [trimmed, ...existing].slice(0, MAX_RECENT_SEARCHES);
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+}
+
+function clearRecentSearches() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(RECENT_SEARCHES_KEY);
+}
 
 const placeholderPhrases = [
   "Men's Casual Polo Shirt",
@@ -24,10 +65,15 @@ const placeholderPhrases = [
 export default function SearchBar() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredResults, setFilteredResults] = useState<any[]>([]);
+  const [filteredResults, setFilteredResults] = useState<SearchProduct[]>([]);
+  const [suggestedResults, setSuggestedResults] = useState<SearchProduct[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false); // Track if user clicked inside input
-  
+
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
+
   // Advanced Animation States
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
@@ -36,6 +82,26 @@ export default function SearchBar() {
   const [animationMode, setAnimationMode] = useState<"typing" | "dots" | "deleting">("typing");
 
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load recent searches once on mount, and fetch trending terms once.
+  useEffect(() => {
+    setRecentSearches(getRecentSearches());
+    fetch("/api/search-log")
+      .then((r) => r.json())
+      .then((d) => setTrendingSearches(d.trending || []))
+      .catch(() => setTrendingSearches([]));
+  }, []);
+
+  const logSearch = (term: string) => {
+    saveRecentSearch(term);
+    setRecentSearches(getRecentSearches());
+    fetch("/api/search-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ term }),
+    }).catch(() => {});
+  };
 
   // Core Hybrid Typewriter & Bouncing Dots State Machine
   useEffect(() => {
@@ -95,31 +161,114 @@ export default function SearchBar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Quick live filtering engine
+  // Live search — debounced real API call against the actual product database.
+  // If the search term matches nothing, we fall back to a small set of
+  // best-selling products so the box is never a dead end for the shopper.
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredResults([]);
+      setSuggestedResults([]);
+      setIsSearching(false);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       return;
     }
 
-    const matchedProducts = frontendProductsDB.filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredResults(matchedProducts);
     setIsOpen(true);
+    setIsSearching(true);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}&limit=6`);
+        const data = await res.json();
+        const matches: SearchProduct[] = data.products || [];
+        setFilteredResults(matches);
+
+        // No direct matches — fetch a fallback set of popular products so
+        // the shopper always sees something they can act on.
+        if (matches.length === 0) {
+          const fallbackRes = await fetch(`/api/products?tag=best-selling&limit=4`);
+          const fallbackData = await fallbackRes.json();
+          setSuggestedResults(fallbackData.products || []);
+        } else {
+          setSuggestedResults([]);
+        }
+      } catch (err) {
+        console.error("Search fetch failed", err);
+        setFilteredResults([]);
+        setSuggestedResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [searchTerm]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      logSearch(searchTerm.trim());
       setIsOpen(false);
-      router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
+      router.push(`/products?search=${encodeURIComponent(searchTerm)}`);
     }
+  };
+
+  const goToProduct = (slug: string) => {
+    if (searchTerm.trim()) logSearch(searchTerm.trim());
+    setIsOpen(false);
+    setSearchTerm("");
+    setIsFocused(false);
+    router.push(`/products/${slug}`);
+  };
+
+  const applyQuickTerm = (term: string) => {
+    setSearchTerm(term);
+    setIsOpen(true);
+  };
+
+  const handleClearRecent = () => {
+    clearRecentSearches();
+    setRecentSearches([]);
   };
 
   // Compile full placeholder string dynamically (If focused, return empty to hide instantly)
   const baseText = placeholderPhrases[phraseIndex].substring(0, charIndex);
   const currentPlaceholder = isFocused ? "" : baseText + ".".repeat(dotCount);
+
+  const showQuickPanel = isOpen && !searchTerm.trim() && (recentSearches.length > 0 || trendingSearches.length > 0);
+  const showResultsPanel = isOpen && searchTerm.trim();
+
+  const renderProductRow = (product: SearchProduct) => {
+    const productName = product.name || product.title || "Unknown Product";
+    const imageUrl = product.images && product.images.length > 0
+      ? getImageUrl(product.images[0])
+      : `https://placehold.co/100x100/2c2769/white?text=${encodeURIComponent(productName[0] || "P")}`;
+
+    return (
+      <div
+        key={product._id}
+        onClick={() => goToProduct(product.slug)}
+        className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+      >
+        <div className="relative w-10 h-10 border border-gray-100 rounded-lg overflow-hidden bg-white flex-shrink-0">
+          <Image src={imageUrl} alt={productName} fill className="object-contain p-0.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-gray-800 truncate">{productName}</p>
+          {product.category && (
+            <p className="text-[10px] text-gray-400 capitalize mt-0.5">{product.category}</p>
+          )}
+        </div>
+        <span className="text-xs font-extrabold text-[#2c2769] whitespace-nowrap">
+          {formatPrice(product.price)}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="relative flex-1 min-w-0" ref={searchRef}>
@@ -132,7 +281,7 @@ export default function SearchBar() {
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => {
             setIsFocused(true); // Hide placeholder instantly when cursor comes in
-            if (searchTerm.trim()) setIsOpen(true);
+            setIsOpen(true);
           }}
           onBlur={() => {
             // Restore animation only if the input field is completely empty
@@ -160,47 +309,93 @@ export default function SearchBar() {
         </button>
       </form>
 
-      {/* Live Search Popup Results Grid */}
-      {isOpen && searchTerm.trim() && (
-        <div className="absolute left-0 right-0 top-[115%] bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden z-50 max-h-80 flex flex-col text-left">
-          <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-            {filteredResults.length > 0 ? (
-              filteredResults.map((product) => (
-                <div
-                  key={product._id}
-                  onClick={() => {
-                    setIsOpen(false);
-                    setSearchTerm("");
-                    setIsFocused(false);
-                    router.push(`/products/${product._id}`);
-                  }}
-                  className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+      {/* Quick Panel — Recent + Trending searches, shown when input is focused but empty */}
+      {showQuickPanel && (
+        <div className="absolute left-0 right-0 top-[115%] bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden z-50 max-h-96 overflow-y-auto text-left p-3 space-y-4">
+          {recentSearches.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Clock size={11} /> Recent Searches
+                </span>
+                <button
+                  type="button"
+                  onClick={handleClearRecent}
+                  className="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  <div className="relative w-10 h-10 border border-gray-100 rounded-lg overflow-hidden bg-white flex-shrink-0">
-                    <Image src={product.image} alt={product.name} fill className="object-contain p-0.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-gray-800 truncate">{product.name}</p>
-                    <p className="text-[10px] text-gray-400 capitalize mt-0.5">{product.category}</p>
-                  </div>
-                  <span className="text-xs font-extrabold text-[#2c2769] whitespace-nowrap">
-                    {formatPrice(product.price)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-4 text-xs text-gray-400 text-center">
-                No products match &quot;{searchTerm}&quot;
+                  Clear
+                </button>
               </div>
+              <div className="flex flex-wrap gap-2">
+                {recentSearches.map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => applyQuickTerm(term)}
+                    className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-full transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {trendingSearches.length > 0 && (
+            <div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                <TrendingUp size={11} /> Trending Now
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {trendingSearches.map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => applyQuickTerm(term)}
+                    className="px-3 py-1.5 bg-[#eeedf5] hover:bg-[#e0ddf2] text-[#2c2769] text-xs font-semibold rounded-full transition-colors capitalize"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Live Search Popup Results Grid */}
+      {showResultsPanel && (
+        <div className="absolute left-0 right-0 top-[115%] bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden z-50 max-h-96 flex flex-col text-left">
+          <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+            {isSearching ? (
+              <div className="p-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+                <Loader2 size={14} className="animate-spin" /> Searching...
+              </div>
+            ) : filteredResults.length > 0 ? (
+              filteredResults.map((product) => renderProductRow(product))
+            ) : (
+              <>
+                <div className="p-4 text-xs text-gray-400 text-center border-b border-gray-50">
+                  No products match &quot;{searchTerm}&quot;
+                </div>
+                {suggestedResults.length > 0 && (
+                  <>
+                    <div className="px-3 pt-2.5 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                      You might like
+                    </div>
+                    {suggestedResults.map((product) => renderProductRow(product))}
+                  </>
+                )}
+              </>
             )}
           </div>
           
-          {filteredResults.length > 0 && (
+          {!isSearching && filteredResults.length > 0 && (
             <div 
               onClick={handleSearchSubmit}
               className="bg-gray-50 p-2.5 text-center text-xs font-bold text-[#2c2769] border-t border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors"
             >
-              View all search results ({filteredResults.length})
+              View all search results
             </div>
           )}
         </div>
