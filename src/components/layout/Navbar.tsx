@@ -199,6 +199,10 @@ useEffect(() => {
   const [openMobileMainSlug, setOpenMobileMainSlug] = useState<string | null>(null);
   const [openMobileSubSlug, setOpenMobileSubSlug] = useState<string | null>(null);
 
+  // ── Fixed top bar height measurement (for spacer) ─────────────────────────
+  const fixedBarRef = useRef<HTMLDivElement>(null);
+  const [fixedBarHeight, setFixedBarHeight] = useState(0);
+
   // ── Derived auth state (NextAuth session থেকে — localStorage না) ─────────
   const isLoggedIn = mounted && status === "authenticated";
   const userName = session?.user?.name || "Customer";
@@ -224,6 +228,22 @@ useEffect(() => {
     const timer = setTimeout(() => setIsAnimate(false), 400);
     return () => clearTimeout(timer);
   }, [totalItems]);
+
+  // Measure the fixed top-bar+navbar height so we can push down the content
+  // below it by exactly that much (avoids hardcoding pixel values that would
+  // break across mobile/desktop breakpoints).
+  useEffect(() => {
+    const el = fixedBarRef.current;
+    if (!el) return;
+
+    const updateHeight = () => setFixedBarHeight(el.offsetHeight);
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(el);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const wishlistCount = mounted ? getWishlistItems().length : 0;
@@ -253,8 +273,8 @@ useEffect(() => {
   return (
     <header className="w-full overflow-visible">
 
-      {/* ── Sticky Group: Top Bar + Main Navbar stay fixed on scroll ───────── */}
-      <div className="sticky top-0 z-50">
+      {/* ── Fixed Group: Top Bar + Main Navbar — always pinned to top ──────── */}
+      <div ref={fixedBarRef} className="fixed top-0 left-0 right-0 z-50">
 
         {/* ── Top Bar — desktop only ─────────────────────────────────────────── */}
         <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
@@ -387,9 +407,14 @@ useEffect(() => {
         </div>
 
       </div>
-      {/* ── End Sticky Group ────────────────────────────────────────────────── */}
+      {/* ── End Fixed Group ─────────────────────────────────────────────────── */}
 
-      {/* ── 3-Level Mega Menu Bar — desktop only, NOT sticky, scrolls normally ─ */}
+      {/* ── Spacer — pushes page content down so it isn't hidden behind the
+           fixed bar above. Height is measured via JS so it always matches
+           exactly, on both mobile and desktop breakpoints. ─────────────────── */}
+      <div style={{ height: fixedBarHeight }} />
+
+      {/* ── 3-Level Mega Menu Bar — desktop only, NOT fixed, scrolls normally ─ */}
       <div className="bg-white text-gray-700 hidden md:block shadow-sm relative border-b border-gray-100">
         <div className="container-main flex items-center">
 
