@@ -6,26 +6,44 @@ import { Product } from "@/types";
 import ProductCard from "@/components/product/ProductCard";
 import { Zap } from "lucide-react";
 
-function Countdown() {
-  const [time, setTime] = useState({ h: 5, m: 59, s: 59 });
+// admin endsAt set na korle, "আজকের রাত ১২:০০টা" পর্যন্ত fallback countdown —
+// আগের behavior অক্ষুণ্ণ রাখা হলো যদি admin কিছু configure না করে থাকে।
+function getRemainingSeconds(endsAt: string | null): number {
+  const now = new Date();
+  let target: Date;
+  if (endsAt) {
+    target = new Date(endsAt);
+    if (isNaN(target.getTime())) {
+      target = new Date(now);
+      target.setHours(23, 59, 59, 999);
+    }
+  } else {
+    target = new Date(now);
+    target.setHours(23, 59, 59, 999);
+  }
+  return Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
+}
+
+function Countdown({ endsAt }: { endsAt: string | null }) {
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(() => getRemainingSeconds(endsAt));
 
   useEffect(() => {
+    setRemainingSeconds(getRemainingSeconds(endsAt));
     const timer = setInterval(() => {
-      setTime((prev) => {
-        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
-        if (prev.m > 0) return { ...prev, m: prev.m - 1, s: 59 };
-        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
-        return prev;
-      });
+      setRemainingSeconds(getRemainingSeconds(endsAt));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [endsAt]);
+
+  const h = Math.floor(remainingSeconds / 3600);
+  const m = Math.floor((remainingSeconds % 3600) / 60);
+  const s = remainingSeconds % 60;
 
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
     <div className="flex items-center gap-1 select-none">
-      {[pad(time.h), pad(time.m), pad(time.s)].map((val, i) => (
+      {[pad(h), pad(m), pad(s)].map((val, i) => (
         <span key={i} className="flex items-center gap-1">
           <span className="bg-white text-[#2c2769] font-extrabold text-sm px-2 py-1 rounded-lg min-w-[32px] text-center shadow-sm">
             {val}
@@ -41,12 +59,30 @@ export default function FlashSaleSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // admin-controlled toggle + countdown end time
+  const [flashSaleSettings, setFlashSaleSettings] = useState<{ isActive: boolean; endsAt: string | null } | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
   useEffect(() => {
     fetch("/api/products?tag=flash-sale&limit=6")
       .then((r) => r.json())
       .then((d) => setProducts(d.products || []))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/settings/flash-sale")
+      .then((r) => r.json())
+      .then((d) => setFlashSaleSettings(d))
+      .catch(() => setFlashSaleSettings({ isActive: true, endsAt: null })) // fail-safe: behave as before
+      .finally(() => setSettingsLoading(false));
+  }, []);
+
+  // Settings এখনো load হচ্ছে, বা admin এই banner টা explicitly off করে রেখেছে —
+  // দুই ক্ষেত্রেই কিছু render করা হবে না।
+  if (settingsLoading || flashSaleSettings?.isActive === false) {
+    return null;
+  }
 
   return (
     <div>
@@ -66,7 +102,7 @@ export default function FlashSaleSection() {
         
         {/* Right Side: Timer + View All (মোবাইলে ফুল উইডথ জ্যাম-মুক্ত স্পেস) */}
         <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto border-t border-white/10 pt-3 md:pt-0 md:border-t-0">
-          <Countdown />
+          <Countdown endsAt={flashSaleSettings?.endsAt ?? null} />
           <Link
             href="/products?tag=flash-sale"
             className="bg-white text-[#2c2769] text-xs font-bold px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
