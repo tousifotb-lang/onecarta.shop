@@ -93,13 +93,13 @@ export default function SearchBar() {
       .catch(() => setTrendingSearches([]));
   }, []);
 
-  const logSearch = (term: string) => {
+  const logSearch = (term: string, hadResults: boolean) => {
     saveRecentSearch(term);
     setRecentSearches(getRecentSearches());
     fetch("/api/search-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ term }),
+      body: JSON.stringify({ term, hadResults }),
     }).catch(() => {});
   };
 
@@ -211,14 +211,14 @@ export default function SearchBar() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      logSearch(searchTerm.trim());
+      logSearch(searchTerm.trim(), filteredResults.length > 0);
       setIsOpen(false);
       router.push(`/products?search=${encodeURIComponent(searchTerm)}`);
     }
   };
 
   const goToProduct = (slug: string) => {
-    if (searchTerm.trim()) logSearch(searchTerm.trim());
+    if (searchTerm.trim()) logSearch(searchTerm.trim(), true); // clicked a result => results existed
     setIsOpen(false);
     setSearchTerm("");
     setIsFocused(false);

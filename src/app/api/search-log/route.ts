@@ -3,12 +3,13 @@ import connectDB from "@/lib/mongodb";
 import SearchLog from "@/models/SearchLog";
 
 // POST: Record that a shopper searched for this term (upsert + increment).
-// Called when the shopper actually submits a search or clicks a result —
-// not on every keystroke, so noise/partial-typing doesn't pollute trends.
+// `hadResults` tells us whether this particular search actually returned
+// any products — used to surface "customers searched but found nothing"
+// terms to the admin, which is a direct signal for what to stock next.
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const { term } = await req.json();
+    const { term, hadResults } = await req.json();
 
     const normalized = (term || "").toLowerCase().trim();
     if (!normalized || normalized.length < 2) {
@@ -17,7 +18,10 @@ export async function POST(req: NextRequest) {
 
     await SearchLog.findOneAndUpdate(
       { term: normalized },
-      { $inc: { count: 1 }, $set: { lastSearchedAt: new Date() } },
+      {
+        $inc: { count: 1, ...(hadResults ? { resultsFoundCount: 1 } : {}) },
+        $set: { lastSearchedAt: new Date() },
+      },
       { upsert: true }
     );
 
@@ -29,6 +33,7 @@ export async function POST(req: NextRequest) {
 }
 
 // GET: Return the top trending search terms, most-searched first.
+// Used by the storefront's "Trending Now" chips.
 export async function GET() {
   try {
     await connectDB();
