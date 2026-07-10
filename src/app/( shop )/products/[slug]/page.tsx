@@ -593,7 +593,14 @@ export default function ProductDetailPage() {
         <div className="p-6">
           {activeTab === "description" && (
             <div className="text-sm text-gray-600 leading-relaxed space-y-3">
-              <p>{product.description || "No description available."}</p>
+              {product.description ? (
+                <div
+                  className="prose prose-sm max-w-none text-gray-600"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              ) : (
+                <p>No description available.</p>
+              )}
               <p>Brand: <span className="font-semibold text-gray-800">{product.brand || "N/A"}</span></p>
               <p>Category: <span className="font-semibold text-gray-800 capitalize">{product.category}</span></p>
             </div>
