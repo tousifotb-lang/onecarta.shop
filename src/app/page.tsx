@@ -22,7 +22,6 @@ export default function HomePage() {
       {/* Featured Products */}
       <ProductSection
         title="Featured Products"
-        icon="⭐"
         tag="featured"
         viewAllHref="/products?tag=featured"
       />
@@ -30,7 +29,6 @@ export default function HomePage() {
       {/* Best Selling */}
       <ProductSection
         title="Best Selling"
-        icon="🔥"
         tag="best-selling"
         viewAllHref="/products?tag=best-selling"
       />

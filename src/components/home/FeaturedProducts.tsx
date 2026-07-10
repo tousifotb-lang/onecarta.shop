@@ -4,16 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Product } from "@/types";
 import ProductCard from "@/components/product/ProductCard";
-import { Star } from "lucide-react";
 
 interface Props {
   title: string;
-  icon: string;
   tag: string;
   viewAllHref: string;
 }
 
-export default function ProductSection({ title, icon, tag, viewAllHref }: Props) {
+export default function ProductSection({ title, tag, viewAllHref }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +27,6 @@ export default function ProductSection({ title, icon, tag, viewAllHref }: Props)
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">{icon}</span>
           <h2 className="text-xl font-extrabold text-gray-800">{title}</h2>
           <div className="w-1 h-6 bg-[#2c2769] rounded-full ml-1" />
         </div>

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     if (tag === "flash-sale") query.isFlashSale = true;
     if (tag === "featured") query.isFeatured = true;
-    if (tag === "best-selling") query.sold = { $gte: 0 };
+    if (tag === "best-selling") query.isBestSelling = true;
     if (tag === "new") query.createdAt = { $exists: true };
     if (brand) query.brand = brand;
 

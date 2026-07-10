@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Product } from "@/types";
 import ProductCard from "@/components/product/ProductCard";
-import { Zap } from "lucide-react";
 
 // admin endsAt set na korle, "আজকের রাত ১২:০০টা" পর্যন্ত fallback countdown —
 // আগের behavior অক্ষুণ্ণ রাখা হলো যদি admin কিছু configure না করে থাকে।
@@ -89,15 +88,10 @@ export default function FlashSaleSection() {
       {/* Header — 🛠️ কাস্টম মোবাইল রেসপন্সিভ ব্যানার */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 bg-gradient-to-r from-[#2c2769] to-[#39378c] rounded-2xl p-4 md:px-5 md:py-4 gap-4 md:gap-0">
         
-        {/* Left Side: Icon + Text */}
-        <div className="flex items-center gap-3">
-          <div className="bg-white/20 p-2 rounded-xl flex-shrink-0">
-            <Zap size={20} className="text-white fill-white" />
-          </div>
-          <div>
-            <h2 className="text-white font-extrabold text-base md:text-lg tracking-tight">Flash Sale</h2>
-            <p className="text-white/70 text-[11px] md:text-xs">Hurry up! Limited stock</p>
-          </div>
+        {/* Left Side: Text only, no icon */}
+        <div>
+          <h2 className="text-white font-extrabold text-base md:text-lg tracking-tight">Flash Sale</h2>
+          <p className="text-white/70 text-[11px] md:text-xs">Hurry up! Limited stock</p>
         </div>
         
         {/* Right Side: Timer + View All (মোবাইলে ফুল উইডথ জ্যাম-মুক্ত স্পেস) */}
