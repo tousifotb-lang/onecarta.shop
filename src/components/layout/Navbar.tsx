@@ -15,6 +15,7 @@ import { useAuthModalStore } from "@/store/authModalStore";
 import CartDrawer from "@/components/cart/CartDrawer";
 import SearchBar from "./SearchBar";
 import LoginModal from "@/components/auth/LoginModal";
+import AnnouncementBar from "./AnnouncementBar";
 
 // (Main -> Sub -> Child)
 const categoriesData = [
@@ -231,7 +232,8 @@ useEffect(() => {
 
   // Measure the fixed top-bar+navbar height so we can push down the content
   // below it by exactly that much (avoids hardcoding pixel values that would
-  // break across mobile/desktop breakpoints).
+  // break across mobile/desktop breakpoints). AnnouncementBar renders INSIDE
+  // this measured group, so when it's shown/hidden the spacer height auto-adjusts.
   useEffect(() => {
     const el = fixedBarRef.current;
     if (!el) return;
@@ -273,8 +275,11 @@ useEffect(() => {
   return (
     <header className="w-full overflow-visible">
 
-      {/* ── Fixed Group: Top Bar + Main Navbar — always pinned to top ──────── */}
+      {/* ── Fixed Group: Announcement Bar + Top Bar + Main Navbar — always pinned to top ──────── */}
       <div ref={fixedBarRef} className="fixed top-0 left-0 right-0 z-50">
+
+        {/* ── Announcement Bar — admin-controlled, renders nothing if no active message ────── */}
+        <AnnouncementBar />
 
         {/* ── Top Bar — desktop only ─────────────────────────────────────────── */}
         <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
