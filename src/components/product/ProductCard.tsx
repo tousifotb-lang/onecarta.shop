@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
-import WishlistButton from "@/components/WishlistButton"; // ✅ NEW
+import WishlistButton from "@/components/WishlistButton";
 
 interface Props {
   product: Product;
@@ -36,7 +36,6 @@ export default function ProductCard({ product, listView = false }: Props) {
     ? Math.round(((product.originalPrice - displayPrice) / product.originalPrice) * 100)
     : 0;
 
-  // ✅ WishlistButton এ pass করার জন্য একবার বানিয়ে নিলাম
   const wishlistProduct = {
     _id: product._id,
     name: productName,
@@ -122,7 +121,6 @@ export default function ProductCard({ product, listView = false }: Props) {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {/* ✅ NEW: List View এ Wishlist button */}
               <WishlistButton
                 product={wishlistProduct}
                 className="w-7 h-7 bg-gray-50 hover:bg-red-50 border border-gray-100 rounded-lg flex items-center justify-center"
@@ -164,7 +162,6 @@ export default function ProductCard({ product, listView = false }: Props) {
           </span>
         )}
 
-        {/* ✅ CHANGED: dummy Heart button → WishlistButton */}
         <WishlistButton
           product={wishlistProduct}
           className="absolute bottom-1.5 right-1.5 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm md:opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50"

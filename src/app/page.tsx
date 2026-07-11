@@ -2,6 +2,7 @@ import HeroBanner from "@/components/home/HeroBanner";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import FlashSaleSection from "@/components/home/FlashSaleSection";
 import ProductSection from "@/components/home/FeaturedProducts";
+import RecentlyViewedSection from "@/components/RecentlyViewedSection";
 
 export default function HomePage() {
   return (
@@ -28,6 +29,9 @@ export default function HomePage() {
         tag="best-selling"
         viewAllHref="/products?tag=best-selling"
       />
+
+      {/* Recently Viewed — shopper's own browsing history (localStorage) */}
+      <RecentlyViewedSection />
     </div>
   );
 }

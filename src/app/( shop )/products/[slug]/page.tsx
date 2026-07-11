@@ -13,9 +13,11 @@ import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import StarRating from "@/components/ui/StarRating";
 import ProductCard from "@/components/product/ProductCard";
+import RecentlyViewedSection from "@/components/RecentlyViewedSection";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useAuthModalStore } from "@/store/authModalStore";
+import { addRecentlyViewed } from "@/lib/recentlyViewed";
 
 function getImageUrl(img: unknown): string {
   if (typeof img === "string") return img;
@@ -216,7 +218,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const { status } = useSession();
   const addItem = useCartStore((state) => state.addItem);
-  const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { toggleWishlist, isInWishlist, getWishlistItems } = useWishlistStore();
   const { openModal } = useAuthModalStore();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -224,7 +226,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews">("description");
+  const [activeTab, setActiveTab] = useState<"specs" | "description" | "reviews">("specs");
   const [mounted, setMounted] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
 
@@ -247,12 +249,59 @@ export default function ProductDetailPage() {
       setProduct(data.product);
       setSelectedImage(0);
 
-      if (data.product?.category) {
-        const relRes = await fetch(
-          `/api/products?category=${data.product.category}&limit=5`
-        );
+      if (data.product) {
+        // Prefer categoryId (this also picks up matching subcategories via
+        // the API's descendant-category expansion) — fall back to the
+        // legacy plain category-name field for older products that predate
+        // categoryId.
+        const catQuery = data.product.categoryId
+          ? `categoryId=${data.product.categoryId}`
+          : `category=${encodeURIComponent(data.product.category)}`;
+
+        const relRes = await fetch(`/api/products?${catQuery}&limit=8`);
         const relData = await relRes.json();
-        setRelated(relData.products?.filter((p: Product) => p.slug !== slug) || []);
+        let relatedProducts: Product[] = (relData.products || []).filter(
+          (p: Product) => p.slug !== slug
+        );
+
+        // No other products in the same category — fall back to
+        // best-selling so this section is never a dead end.
+        if (relatedProducts.length === 0) {
+          const fallbackRes = await fetch(`/api/products?tag=best-selling&limit=8`);
+          const fallbackData = await fallbackRes.json();
+          relatedProducts = (fallbackData.products || []).filter(
+            (p: Product) => p.slug !== slug
+          );
+        }
+
+        // Prioritize products the shopper has already wishlisted — these
+        // are things they've explicitly shown interest in, so surface them
+        // first within the related list rather than mixing in randomly.
+        const wishlistIds = new Set(getWishlistItems().map((w) => w._id));
+        relatedProducts.sort((a, b) => {
+          const aWishlisted = wishlistIds.has(a._id) ? 1 : 0;
+          const bWishlisted = wishlistIds.has(b._id) ? 1 : 0;
+          return bWishlisted - aWishlisted;
+        });
+
+        setRelated(relatedProducts);
+
+        // Record this product as "recently viewed" (localStorage) for the
+        // shared RecentlyViewedSection to pick up on the homepage too.
+        const productName = data.product.name || data.product.title || "Unknown Product";
+        const displayPriceForHistory =
+          data.product.isFlashSale && data.product.flashSalePrice
+            ? data.product.flashSalePrice
+            : data.product.price;
+
+        addRecentlyViewed({
+          _id: data.product._id,
+          slug: data.product.slug,
+          name: productName,
+          image: getImageUrl(data.product.images?.[0]),
+          price: displayPriceForHistory,
+          category: data.product.category,
+        });
       }
     } catch (err) {
       console.error(err);
@@ -572,40 +621,29 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — order: Specifications, Description, Reviews */}
       <div className="bg-white rounded-2xl shadow-sm mb-12">
         <div className="flex border-b border-gray-100">
-          {(["description", "specs", "reviews"] as const).map((tab) => (
+          {(["specs", "description", "reviews"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-4 text-sm font-semibold capitalize transition-colors ${
+              className={`px-6 py-4 text-sm font-semibold transition-colors ${
                 activeTab === tab
                   ? "text-[#2c2769] border-b-2 border-[#2c2769]"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab === "reviews" ? `Reviews (${product.reviewCount})` : tab}
+              {tab === "reviews"
+                ? `Reviews (${product.reviewCount})`
+                : tab === "specs"
+                ? "Specifications"
+                : "Description"}
             </button>
           ))}
         </div>
 
         <div className="p-6">
-          {activeTab === "description" && (
-            <div className="text-sm text-gray-600 leading-relaxed space-y-3">
-              {product.description ? (
-                <div
-                  className="prose prose-sm max-w-none text-gray-600"
-                  dangerouslySetInnerHTML={{ __html: product.description }}
-                />
-              ) : (
-                <p>No description available.</p>
-              )}
-              <p>Brand: <span className="font-semibold text-gray-800">{product.brand || "N/A"}</span></p>
-              <p>Category: <span className="font-semibold text-gray-800 capitalize">{product.category}</span></p>
-            </div>
-          )}
-
           {activeTab === "specs" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
@@ -621,6 +659,21 @@ export default function ProductDetailPage() {
                   <span className="font-semibold text-gray-800 capitalize">{val}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === "description" && (
+            <div className="text-sm text-gray-600 leading-relaxed space-y-3">
+              {product.description ? (
+                <div
+                  className="prose prose-sm max-w-none text-gray-600"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              ) : (
+                <p>No description available.</p>
+              )}
+              <p>Brand: <span className="font-semibold text-gray-800">{product.brand || "N/A"}</span></p>
+              <p>Category: <span className="font-semibold text-gray-800 capitalize">{product.category}</span></p>
             </div>
           )}
 
@@ -672,8 +725,10 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {/* Related Products — directly below the Specifications/Tabs card.
+          Wishlisted items are sorted to the front (see fetchProduct). */}
       {related.length > 0 && (
-        <div>
+        <div className="mb-12">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Related Products</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {related.slice(0, 5).map((p) => (
@@ -682,6 +737,9 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Recently Viewed — shared component, also used on the homepage */}
+      <RecentlyViewedSection excludeSlug={String(slug)} />
     </div>
   );
 }
