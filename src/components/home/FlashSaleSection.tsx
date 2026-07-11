@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Product } from "@/types";
 import ProductCard from "@/components/product/ProductCard";
@@ -54,6 +54,80 @@ function Countdown({ endsAt }: { endsAt: string | null }) {
   );
 }
 
+// Below this many products, show a static grid — the auto-scroll marquee
+// only kicks in once there are enough items that looping actually reads
+// as "endless" rather than obviously repeating too soon.
+const AUTO_SCROLL_THRESHOLD = 6;
+
+// How long the carousel pauses between each single-card step.
+const STEP_INTERVAL_MS = 2800;
+
+// How long we wait after starting a smooth scroll before checking whether
+// we've crossed into the duplicated set and need to snap back invisibly.
+const STEP_SETTLE_MS = 650;
+
+function FlashSaleCarousel({ products }: { products: Product[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const firstSetRef = useRef<HTMLDivElement>(null);
+  const isPausedRef = useRef(false);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const firstSet = firstSetRef.current;
+    if (!container || !firstSet) return;
+
+    const interval = setInterval(() => {
+      if (isPausedRef.current) return;
+
+      const singleSetWidth = firstSet.scrollWidth;
+      // Average per-card width (including its share of the gap) — computed
+      // fresh every tick so it stays correct across responsive breakpoints
+      // and doesn't need a separate width measurement per card.
+      const step = singleSetWidth / products.length;
+
+      container.scrollTo({ left: container.scrollLeft + step, behavior: "smooth" });
+
+      // Once we've scrolled a full set's worth, the duplicated second set
+      // is now sitting exactly where the first set started — snap back by
+      // that same width instantly so the loop never visibly "ends".
+      setTimeout(() => {
+        if (!container) return;
+        if (container.scrollLeft >= singleSetWidth - 1) {
+          container.scrollTo({ left: container.scrollLeft - singleSetWidth, behavior: "auto" });
+        }
+      }, STEP_SETTLE_MS);
+    }, STEP_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [products.length]);
+
+  const cardWidthClasses = "w-[46%] sm:w-[31%] md:w-[23%] lg:w-[15.6%] flex-shrink-0";
+
+  return (
+    <div
+      ref={scrollRef}
+      onMouseEnter={() => { isPausedRef.current = true; }}
+      onMouseLeave={() => { isPausedRef.current = false; }}
+      className="flex overflow-hidden gap-4"
+    >
+      <div ref={firstSetRef} className="flex gap-4 flex-shrink-0">
+        {products.map((p) => (
+          <div key={`set-a-${p._id}`} className={cardWidthClasses}>
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-4 flex-shrink-0">
+        {products.map((p) => (
+          <div key={`set-b-${p._id}`} className={cardWidthClasses}>
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function FlashSaleSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +137,7 @@ export default function FlashSaleSection() {
   const [settingsLoading, setSettingsLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/products?tag=flash-sale&limit=6")
+    fetch("/api/products?tag=flash-sale&limit=12")
       .then((r) => r.json())
       .then((d) => setProducts(d.products || []))
       .finally(() => setLoading(false));
@@ -82,6 +156,8 @@ export default function FlashSaleSection() {
   if (settingsLoading || flashSaleSettings?.isActive === false) {
     return null;
   }
+
+  const shouldAutoScroll = products.length > AUTO_SCROLL_THRESHOLD;
 
   return (
     <div>
@@ -106,7 +182,7 @@ export default function FlashSaleSection() {
         </div>
       </div>
 
-      {/* Products Grid */}
+      {/* Products */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
@@ -119,6 +195,8 @@ export default function FlashSaleSection() {
         </div>
       ) : products.length === 0 ? (
         <p className="text-center text-gray-400 py-8">No flash sale products</p>
+      ) : shouldAutoScroll ? (
+        <FlashSaleCarousel products={products} />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {products.map((p) => (
