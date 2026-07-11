@@ -41,7 +41,7 @@ export default function AnnouncementBar({ messages }: AnnouncementBarProps) {
           key={currentIndex}
           onAnimationEnd={handleAnimationEnd}
           style={{ animationDuration: `${duration}s` }}
-          className="whitespace-nowrap text-[11px] sm:text-xs font-bold tracking-wide announcement-slide"
+          className="whitespace-nowrap text-[15px] sm:text-xs font-bold tracking-wide announcement-slide"
         >
           {currentMessage}
         </span>
