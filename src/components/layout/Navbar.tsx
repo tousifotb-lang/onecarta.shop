@@ -204,6 +204,26 @@ useEffect(() => {
   const fixedBarRef = useRef<HTMLDivElement>(null);
   const [fixedBarHeight, setFixedBarHeight] = useState(0);
 
+  // ── Announcement bar settings — decides whether to show the scrolling
+  //    announcement or the normal phone/order-status info row (mutually
+  //    exclusive, same slot at the very top of the fixed group). ────────────
+  const [announcementSettings, setAnnouncementSettings] = useState<{ isActive: boolean; messages: string[] } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/announcement")
+      .then((r) => r.json())
+      .then((d) =>
+        setAnnouncementSettings({
+          isActive: !!d.isActive,
+          messages: Array.isArray(d.messages) ? d.messages : [],
+        })
+      )
+      .catch(() => setAnnouncementSettings({ isActive: false, messages: [] }));
+  }, []);
+
+  const activeAnnouncementMessages = (announcementSettings?.messages || []).filter((m) => m && m.trim());
+  const hasActiveAnnouncement = !!announcementSettings?.isActive && activeAnnouncementMessages.length > 0;
+
   // ── Derived auth state (NextAuth session থেকে — localStorage না) ─────────
   const isLoggedIn = mounted && status === "authenticated";
   const userName = session?.user?.name || "Customer";
@@ -232,8 +252,8 @@ useEffect(() => {
 
   // Measure the fixed top-bar+navbar height so we can push down the content
   // below it by exactly that much (avoids hardcoding pixel values that would
-  // break across mobile/desktop breakpoints). AnnouncementBar renders INSIDE
-  // this measured group, so when it's shown/hidden the spacer height auto-adjusts.
+  // break across mobile/desktop breakpoints). Announcement bar / top bar
+  // swap in the same slot, so this auto-recalculates on every render either way.
   useEffect(() => {
     const el = fixedBarRef.current;
     if (!el) return;
@@ -275,28 +295,29 @@ useEffect(() => {
   return (
     <header className="w-full overflow-visible">
 
-      {/* ── Fixed Group: Announcement Bar + Top Bar + Main Navbar — always pinned to top ──────── */}
+      {/* ── Fixed Group: Announcement/Top Bar (mutually exclusive) + Main Navbar — always pinned to top ──────── */}
       <div ref={fixedBarRef} className="fixed top-0 left-0 right-0 z-50">
 
-        {/* ── Announcement Bar — admin-controlled, renders nothing if no active message ────── */}
-        <AnnouncementBar />
-
-        {/* ── Top Bar — desktop only ─────────────────────────────────────────── */}
-        <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
-          <div className="container-main flex items-center justify-between">
-            <div className="flex items-center gap-1 text-gray-600 font-medium">
-              <Phone size={12} />
-              <span>01303223513</span>
-            </div>
-            <div className="flex items-center gap-4 text-gray-600 font-medium">
-              <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]"><Package size={12} /> ORDER STATUS</Link>
-              <Link href="/gifts" className="flex items-center gap-1 hover:text-[#2c2769]"><Gift size={12} /> GIFT</Link>
-              <Link href="/blog" className="flex items-center gap-1 hover:text-[#2c2769]"><BookOpen size={12} /> BLOGS</Link>
-              <Link href="/emi" className="flex items-center gap-1 hover:text-[#2c2769]"><CreditCard size={12} /> EMI POLICY</Link>
-              <Link href="/store" className="flex items-center gap-1 hover:text-[#2c2769]"><Store size={12} /> STORE LOCATION</Link>
+        {/* ── Announcement Bar OR Top Bar — same slot, never both at once ────── */}
+        {hasActiveAnnouncement ? (
+          <AnnouncementBar messages={activeAnnouncementMessages} />
+        ) : (
+          <div className="hidden md:block bg-white border-b border-gray-100 text-xs py-1.5">
+            <div className="container-main flex items-center justify-between">
+              <div className="flex items-center gap-1 text-gray-600 font-medium">
+                <Phone size={12} />
+                <span>01303223513</span>
+              </div>
+              <div className="flex items-center gap-4 text-gray-600 font-medium">
+                <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]"><Package size={12} /> ORDER STATUS</Link>
+                <Link href="/gifts" className="flex items-center gap-1 hover:text-[#2c2769]"><Gift size={12} /> GIFT</Link>
+                <Link href="/blog" className="flex items-center gap-1 hover:text-[#2c2769]"><BookOpen size={12} /> BLOGS</Link>
+                <Link href="/emi" className="flex items-center gap-1 hover:text-[#2c2769]"><CreditCard size={12} /> EMI POLICY</Link>
+                <Link href="/store" className="flex items-center gap-1 hover:text-[#2c2769]"><Store size={12} /> STORE LOCATION</Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── Main Navbar ────────────────────────────────────────────────────── */}
         <div className="bg-[#1a1a2e] shadow-lg w-full">
