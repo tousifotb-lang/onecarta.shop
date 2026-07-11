@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -17,146 +17,61 @@ import SearchBar from "./SearchBar";
 import LoginModal from "@/components/auth/LoginModal";
 import AnnouncementBar from "./AnnouncementBar";
 
-// (Main -> Sub -> Child)
-const categoriesData = [
-  {
-    name: "Electronics",
-    slug: "electronics",
-    icon: "📱",
-    subCategories: [
-      {
-        name: "Smartphones",
-        slug: "smartphones",
-        childCategories: [
-          { name: "Apple iPhones", slug: "apple-iphones" },
-          { name: "Samsung Galaxy", slug: "samsung-galaxy" },
-          { name: "Google Pixel", slug: "google-pixel" },
-          { name: "Xiaomi Phones", slug: "xiaomi-phones" },
-        ]
-      },
-      {
-        name: "Smart Watches",
-        slug: "smart-watches",
-        childCategories: [
-          { name: "Apple Watch Series", slug: "apple-watch" },
-          { name: "Galaxy Active", slug: "galaxy-active" },
-          { name: "Amazfit Smart", slug: "amazfit" },
-        ]
-      },
-      {
-        name: "Power Banks",
-        slug: "power-banks",
-        childCategories: [
-          { name: "Anker Fast Charge", slug: "anker" },
-          { name: "Baseus Power", slug: "baseus" },
-        ]
-      },
-      {
-        name: "Charging Cables",
-        slug: "charging-cables",
-        childCategories: [
-          { name: "Type-C Premium", slug: "type-c" },
-          { name: "Lightning Cables", slug: "lightning" },
-        ]
-      },
-      {
-        name: "Bluetooth Speakers",
-        slug: "bluetooth-speakers",
-        childCategories: [
-          { name: "JBL Portable", slug: "jbl" },
-          { name: "Anker Soundcore", slug: "soundcore" },
-        ]
-      },
-    ]
-  },
-  {
-    name: "Fashion",
-    slug: "fashion",
-    icon: "👗",
-    subCategories: [
-      {
-        name: "Men's Casual Polo",
-        slug: "mens-polo",
-        childCategories: [
-          { name: "Slim Fit Polo", slug: "slim-fit" },
-          { name: "Oversized Polo", slug: "oversized" },
-        ]
-      },
-      {
-        name: "Gents Watches",
-        slug: "gents-watches",
-        childCategories: [
-          { name: "Casio Edifice", slug: "casio" },
-          { name: "Curren Analogue", slug: "curren" },
-        ]
-      },
-      {
-        name: "Leather Wallets",
-        slug: "leather-wallets",
-        childCategories: [
-          { name: "Bi-Fold Wallets", slug: "bifold" },
-          { name: "Card Holders", slug: "card-holders" },
-        ]
-      },
-    ]
-  },
-  {
-    name: "Home & Living",
-    slug: "home-living",
-    icon: "🏠",
-    subCategories: [
-      {
-        name: "Smart Lights",
-        slug: "smart-lights",
-        childCategories: [
-          { name: "Philips Hue", slug: "philips-hue" },
-          { name: "RGB LED Strips", slug: "rgb-strips" },
-        ]
-      },
-      {
-        name: "Kitchen Tools",
-        slug: "kitchen-tools",
-        childCategories: [
-          { name: "Blenders & Juicers", slug: "blenders" },
-          { name: "Air Fryers", slug: "air-fryers" },
-        ]
-      },
-    ]
-  },
-  {
-    name: "Groceries",
-    slug: "groceries",
-    icon: "🛒",
-    subCategories: [
-      {
-        name: "Fresh Fruits",
-        slug: "fresh-fruits",
-        childCategories: [
-          { name: "Imported Apples", slug: "apples" },
-          { name: "Organic Bananas", slug: "bananas" },
-        ]
-      },
-    ]
-  },
-  {
-    name: "Sports",
-    slug: "sports",
-    icon: "⚽",
-    subCategories: [
-      {
-        name: "Football Jerseys",
-        slug: "football-jerseys",
-        childCategories: [
-          { name: "Bangladesh National", slug: "bd-jersey" },
-          { name: "Club Jerseys", slug: "club-jersey" },
-        ]
-      },
-    ]
-  },
-  { name: "Beauty", slug: "beauty", icon: "💄", subCategories: [] },
-  { name: "Toys", slug: "toys", icon: "🧸", subCategories: [] },
-  { name: "Books", slug: "books", icon: "📚", subCategories: [] },
-];
+// ── Category tree node — built at runtime from the flat /api/categories?all=true
+// response (each raw category carries a parentId). Replaces the old hardcoded
+// categoriesData array so the mega menu always matches what's actually in the DB. ──
+interface CategoryNode {
+  _id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+  image?: string;
+  parentId: string | null;
+  order?: number;
+  isActive?: boolean;
+  children: CategoryNode[];
+}
+
+function buildCategoryTree(flat: any[]): CategoryNode[] {
+  const map: Record<string, CategoryNode> = {};
+
+  flat.forEach((c) => {
+    map[String(c._id)] = {
+      _id: String(c._id),
+      name: c.name,
+      slug: c.slug,
+      icon: c.icon,
+      image: c.image,
+      parentId: c.parentId ? String(c.parentId) : null,
+      order: c.order ?? 0,
+      isActive: c.isActive !== false,
+      children: [],
+    };
+  });
+
+  const roots: CategoryNode[] = [];
+
+  flat.forEach((c) => {
+    const node = map[String(c._id)];
+    if (!node.isActive) return; // skip categories the admin has disabled
+
+    if (node.parentId && map[node.parentId]) {
+      map[node.parentId].children.push(node);
+    } else if (!node.parentId) {
+      roots.push(node);
+    }
+    // orphaned parentId (parent missing/inactive) — silently drop rather
+    // than showing a subcategory floating with no context in the menu.
+  });
+
+  const sortRec = (nodes: CategoryNode[]) => {
+    nodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+    nodes.forEach((n) => sortRec(n.children));
+  };
+  sortRec(roots);
+
+  return roots;
+}
 
 export default function Navbar() {
   const router = useRouter();
@@ -182,13 +97,39 @@ useEffect(() => {
   // ── Auth Modal (global) ───────────────────────────────────────────────────
   const { isOpen: isAuthModalOpen, openModal, closeModal } = useAuthModalStore();
 
+  // ── Category data — fetched from the real database instead of a
+  // hardcoded array, so the mega menu always reflects what's in Categories
+  // in the admin panel. ────────────────────────────────────────────────────
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/categories?all=true")
+      .then((res) => res.json())
+      .then((data) => {
+        const flat = Array.isArray(data) ? data : [];
+        setCategoryTree(buildCategoryTree(flat));
+      })
+      .catch(() => setCategoryTree([]))
+      .finally(() => setCategoriesLoading(false));
+  }, []);
+
   // ── Local UI state ────────────────────────────────────────────────────────
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
 
-  const [activeCategory, setActiveCategory] = useState(categoriesData[0]);
-  const [activeSubCategory, setActiveSubCategory] = useState<any>(categoriesData[0].subCategories[0] || null);
+  const [activeCategory, setActiveCategory] = useState<CategoryNode | null>(null);
+  const [activeSubCategory, setActiveSubCategory] = useState<CategoryNode | null>(null);
+
+  // Once categories load, default the mega menu's first two columns to the
+  // first top-level category (and its first subcategory, if any).
+  useEffect(() => {
+    if (categoryTree.length > 0 && !activeCategory) {
+      setActiveCategory(categoryTree[0]);
+      setActiveSubCategory(categoryTree[0].children[0] || null);
+    }
+  }, [categoryTree, activeCategory]);
 
   const [cartOpen, setCartOpen] = useState(false);
   const [isAnimate, setIsAnimate] = useState(false);
@@ -271,9 +212,9 @@ useEffect(() => {
   const wishlistCount = mounted ? getWishlistItems().length : 0;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleCategoryHover = (cat: any) => {
+  const handleCategoryHover = (cat: CategoryNode) => {
     setActiveCategory(cat);
-    setActiveSubCategory(cat.subCategories?.length > 0 ? cat.subCategories[0] : null);
+    setActiveSubCategory(cat.children.length > 0 ? cat.children[0] : null);
   };
 
   const handleLogout = () => {
@@ -454,69 +395,81 @@ useEffect(() => {
             {megaMenuOpen && (
               <div className="absolute top-full left-0 w-[960px] lg:w-[1140px] bg-white border border-gray-100 shadow-2xl rounded-b-2xl z-[99999] flex text-gray-800 select-none">
 
-                {/* Column 1: Main categories */}
-                <div className="w-60 bg-gray-50/80 p-2 border-r border-gray-100 flex-shrink-0">
-                  <p className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">All Categories</p>
-                  <div className="space-y-0.5">
-                    {categoriesData.map((cat) => (
-                      <div
-                        key={cat.slug}
-                        onMouseEnter={() => handleCategoryHover(cat)}
-                        onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${cat.slug}`); }}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold rounded-xl cursor-pointer ${activeCategory.slug === cat.slug ? "bg-white border-l-4 border-[#1a1a2e] text-[#1a1a2e] shadow-sm pl-4" : "text-gray-600 hover:bg-gray-100/70"}`}
-                      >
-                        <div className="flex items-center gap-2.5"><span className="text-sm">{cat.icon}</span><span>{cat.name}</span></div>
-                        <ChevronRight size={12} className={activeCategory.slug === cat.slug ? "text-[#1a1a2e]" : "text-gray-300"} />
-                      </div>
-                    ))}
+                {categoriesLoading ? (
+                  <div className="w-full flex items-center justify-center py-16 text-xs text-gray-400 font-semibold">
+                    Loading categories...
                   </div>
-                </div>
-
-                {/* Column 2: Sub categories */}
-                <div className="w-64 p-3 border-r border-gray-100 min-h-[380px] bg-white flex-shrink-0">
-                  <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 pb-2 mb-2">{activeCategory.name} Sub-items</p>
-                  {activeCategory.subCategories?.length > 0 ? (
-                    <div className="space-y-0.5">
-                      {activeCategory.subCategories.map((sub: any) => (
-                        <div
-                          key={sub.slug}
-                          onMouseEnter={() => setActiveSubCategory(sub)}
-                          onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }}
-                          className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory?.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}
-                        >
-                          <span className="truncate">{sub.name}</span>
-                          <ChevronRight size={11} className="text-gray-300" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>
-                  )}
-                </div>
-
-                {/* Column 3: Child categories */}
-                <div className="flex-1 p-4 bg-gray-50/30 min-h-[380px]">
-                  {activeSubCategory?.childCategories ? (
-                    <div>
-                      <p className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">⚡ {activeSubCategory.name} Collections</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {activeSubCategory.childCategories.map((child: any) => (
-                          <Link
-                            key={child.slug}
-                            href={`/products?category=${activeCategory.slug}&sub=${activeSubCategory.slug}&child=${child.slug}`}
-                            onClick={() => setMegaMenuOpen(false)}
-                            className="text-xs font-semibold text-gray-600 hover:text-[#1a1a2e] hover:bg-white p-2 rounded-lg border border-transparent shadow-sm flex items-center gap-1.5"
+                ) : categoryTree.length === 0 ? (
+                  <div className="w-full flex items-center justify-center py-16 text-xs text-gray-400 font-semibold">
+                    No categories available yet
+                  </div>
+                ) : (
+                  <>
+                    {/* Column 1: Main categories */}
+                    <div className="w-60 bg-gray-50/80 p-2 border-r border-gray-100 flex-shrink-0">
+                      <p className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">All Categories</p>
+                      <div className="space-y-0.5">
+                        {categoryTree.map((cat) => (
+                          <div
+                            key={cat._id}
+                            onMouseEnter={() => handleCategoryHover(cat)}
+                            onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${cat.slug}`); }}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold rounded-xl cursor-pointer ${activeCategory?.slug === cat.slug ? "bg-white border-l-4 border-[#1a1a2e] text-[#1a1a2e] shadow-sm pl-4" : "text-gray-600 hover:bg-gray-100/70"}`}
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                            <span>{child.name}</span>
-                          </Link>
+                            <div className="flex items-center gap-2.5"><span className="text-sm">{cat.icon || "🛍️"}</span><span>{cat.name}</span></div>
+                            <ChevronRight size={12} className={activeCategory?.slug === cat.slug ? "text-[#1a1a2e]" : "text-gray-300"} />
+                          </div>
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-center text-gray-300 text-xs">Hover over sub-items to view classifications</div>
-                  )}
-                </div>
+
+                    {/* Column 2: Sub categories */}
+                    <div className="w-64 p-3 border-r border-gray-100 min-h-[380px] bg-white flex-shrink-0">
+                      <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 pb-2 mb-2">{activeCategory?.name} Sub-items</p>
+                      {activeCategory && activeCategory.children.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {activeCategory.children.map((sub) => (
+                            <div
+                              key={sub._id}
+                              onMouseEnter={() => setActiveSubCategory(sub)}
+                              onClick={() => { setMegaMenuOpen(false); router.push(`/products?category=${activeCategory.slug}&sub=${sub.slug}`); }}
+                              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg cursor-pointer ${activeSubCategory?.slug === sub.slug ? "bg-[#eeedf5] text-[#1a1a2e]" : "text-gray-600 hover:bg-gray-50"}`}
+                            >
+                              <span className="truncate">{sub.name}</span>
+                              <ChevronRight size={11} className="text-gray-300" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic p-2">No sub-items available</p>
+                      )}
+                    </div>
+
+                    {/* Column 3: Child categories */}
+                    <div className="flex-1 p-4 bg-gray-50/30 min-h-[380px]">
+                      {activeSubCategory && activeSubCategory.children.length > 0 ? (
+                        <div>
+                          <p className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">⚡ {activeSubCategory.name} Collections</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {activeSubCategory.children.map((child) => (
+                              <Link
+                                key={child._id}
+                                href={`/products?category=${activeCategory?.slug}&sub=${activeSubCategory.slug}&child=${child.slug}`}
+                                onClick={() => setMegaMenuOpen(false)}
+                                className="text-xs font-semibold text-gray-600 hover:text-[#1a1a2e] hover:bg-white p-2 rounded-lg border border-transparent shadow-sm flex items-center gap-1.5"
+                              >
+                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                <span>{child.name}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-center text-gray-300 text-xs">Hover over sub-items to view classifications</div>
+                      )}
+                    </div>
+                  </>
+                )}
 
               </div>
             )}
@@ -563,85 +516,91 @@ useEffect(() => {
 
             {/* 3-Level Accordion */}
             <div className="p-2 space-y-1 mb-16 overflow-y-auto flex-1">
-              {categoriesData.map((cat) => {
-                const isMainOpen = openMobileMainSlug === cat.slug;
-                const hasSubs = cat.subCategories?.length > 0;
+              {categoriesLoading ? (
+                <div className="text-center text-xs text-gray-400 font-semibold py-10">Loading categories...</div>
+              ) : categoryTree.length === 0 ? (
+                <div className="text-center text-xs text-gray-400 font-semibold py-10">No categories available yet</div>
+              ) : (
+                categoryTree.map((cat) => {
+                  const isMainOpen = openMobileMainSlug === cat.slug;
+                  const hasSubs = cat.children.length > 0;
 
-                return (
-                  <div key={cat.slug} className="border-b border-white/5 last:border-0">
+                  return (
+                    <div key={cat._id} className="border-b border-white/5 last:border-0">
 
-                    {/* Level 1 */}
-                    <div
-                      onClick={() => {
-                        if (hasSubs) {
-                          toggleMobileMain(cat.slug);
-                        } else {
-                          setMobileOpen(false);
-                          router.push(`/products?category=${cat.slug}`);
-                        }
-                      }}
-                      className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all cursor-pointer ${isMainOpen ? 'bg-[#a8a6d9]/10 text-[#a8a6d9]' : 'text-white active:bg-white/5'}`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <span className="text-xl bg-white/5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">{cat.icon}</span>
-                        <span className="font-bold tracking-wide">{cat.name}</span>
+                      {/* Level 1 */}
+                      <div
+                        onClick={() => {
+                          if (hasSubs) {
+                            toggleMobileMain(cat.slug);
+                          } else {
+                            setMobileOpen(false);
+                            router.push(`/products?category=${cat.slug}`);
+                          }
+                        }}
+                        className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all cursor-pointer ${isMainOpen ? 'bg-[#a8a6d9]/10 text-[#a8a6d9]' : 'text-white active:bg-white/5'}`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <span className="text-xl bg-white/5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">{cat.icon || "🛍️"}</span>
+                          <span className="font-bold tracking-wide">{cat.name}</span>
+                        </div>
+                        {hasSubs && (
+                          <ChevronDown size={16} className={`transition-transform duration-200 ${isMainOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
+                        )}
                       </div>
-                      {hasSubs && (
-                        <ChevronDown size={16} className={`transition-transform duration-200 ${isMainOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
-                      )}
-                    </div>
 
-                    {/* Level 2 */}
-                    {hasSubs && isMainOpen && (
-                      <div className="pl-6 pr-2 py-1 bg-black/20 rounded-xl mt-1 space-y-0.5 animate-in fade-in duration-200">
-                        {cat.subCategories.map((sub: any) => {
-                          const isSubOpen = openMobileSubSlug === sub.slug;
-                          const hasChildren = sub.childCategories?.length > 0;
+                      {/* Level 2 */}
+                      {hasSubs && isMainOpen && (
+                        <div className="pl-6 pr-2 py-1 bg-black/20 rounded-xl mt-1 space-y-0.5 animate-in fade-in duration-200">
+                          {cat.children.map((sub) => {
+                            const isSubOpen = openMobileSubSlug === sub.slug;
+                            const hasChildren = sub.children.length > 0;
 
-                          return (
-                            <div key={sub.slug} className="rounded-lg">
-                              <div
-                                onClick={(e) => {
-                                  if (hasChildren) {
-                                    toggleMobileSub(e, sub.slug);
-                                  } else {
-                                    setMobileOpen(false);
-                                    router.push(`/products?category=${cat.slug}&sub=${sub.slug}`);
-                                  }
-                                }}
-                                className={`flex items-center justify-between px-3 py-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${isSubOpen ? 'text-[#a8a6d9] bg-[#a8a6d9]/5' : 'text-white hover:text-[#a8a6d9]'}`}
-                              >
-                                <span className="truncate">{sub.name}</span>
-                                {hasChildren && (
-                                  <ChevronDown size={14} className={`transition-transform duration-200 ${isSubOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
+                            return (
+                              <div key={sub._id} className="rounded-lg">
+                                <div
+                                  onClick={(e) => {
+                                    if (hasChildren) {
+                                      toggleMobileSub(e, sub.slug);
+                                    } else {
+                                      setMobileOpen(false);
+                                      router.push(`/products?category=${cat.slug}&sub=${sub.slug}`);
+                                    }
+                                  }}
+                                  className={`flex items-center justify-between px-3 py-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${isSubOpen ? 'text-[#a8a6d9] bg-[#a8a6d9]/5' : 'text-white hover:text-[#a8a6d9]'}`}
+                                >
+                                  <span className="truncate">{sub.name}</span>
+                                  {hasChildren && (
+                                    <ChevronDown size={14} className={`transition-transform duration-200 ${isSubOpen ? 'rotate-180 text-[#a8a6d9]' : 'text-gray-400'}`} />
+                                  )}
+                                </div>
+
+                                {/* Level 3 */}
+                                {hasChildren && isSubOpen && (
+                                  <div className="pl-4 pr-1 pb-2 grid grid-cols-1 gap-1 animate-in slide-in-from-top-1 duration-200">
+                                    {sub.children.map((child) => (
+                                      <Link
+                                        key={child._id}
+                                        href={`/products?category=${cat.slug}&sub=${sub.slug}&child=${child.slug}`}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="text-[11px] font-bold text-gray-200 hover:text-[#a8a6d9] active:text-[#a8a6d9] py-2.5 px-3 rounded-md bg-white/5 border border-transparent active:border-white/10 flex items-center gap-2"
+                                      >
+                                        <div className="w-1 h-1 rounded-full bg-[#a8a6d9]" />
+                                        <span>{child.name}</span>
+                                      </Link>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
+                            );
+                          })}
+                        </div>
+                      )}
 
-                              {/* Level 3 */}
-                              {hasChildren && isSubOpen && (
-                                <div className="pl-4 pr-1 pb-2 grid grid-cols-1 gap-1 animate-in slide-in-from-top-1 duration-200">
-                                  {sub.childCategories.map((child: any) => (
-                                    <Link
-                                      key={child.slug}
-                                      href={`/products?category=${cat.slug}&sub=${sub.slug}&child=${child.slug}`}
-                                      onClick={() => setMobileOpen(false)}
-                                      className="text-[11px] font-bold text-gray-200 hover:text-[#a8a6d9] active:text-[#a8a6d9] py-2.5 px-3 rounded-md bg-white/5 border border-transparent active:border-white/10 flex items-center gap-2"
-                                    >
-                                      <div className="w-1 h-1 rounded-full bg-[#a8a6d9]" />
-                                      <span>{child.name}</span>
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })
+              )}
             </div>
 
           </div>
