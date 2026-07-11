@@ -39,7 +39,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   if (!mounted || !isRendered) return null;
 
-  // 🛠️ টাচ হ্যান্ডলার (বাম থেকে ডানে সোয়াইপ ডিটেক্ট করা)
+  // 🛠️ টাচ হ্যান্ডলার (বাম থেকে ডানে সোয়াইপ ডিটেক্ট করা)
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -52,7 +52,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchEnd - touchStart;
-    const isLeftToRightSwipe = distance > 50; // ৫০ পিক্সেলের বেশি ডানে সোয়াইপ হলে বন্ধ হবে
+    const isLeftToRightSwipe = distance > 50; // ৫০ পিক্সেলের বেশি ডানে সোয়াইপ হলে বন্ধ হবে
     if (isLeftToRightSwipe) {
       onClose();
     }
@@ -67,6 +67,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     onClose();
     router.push("/");
   };
+
+  // Total savings across the whole cart — sum of (originalPrice - price) * qty
+  // for every item that actually has a discount. Shown separately from any
+  // coupon discount, which only appears at checkout.
+  const totalSavings = items.reduce((sum, item) => {
+    const original = item.originalPrice ?? item.price;
+    return sum + Math.max(0, original - item.price) * item.quantity;
+  }, 0);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -121,63 +129,81 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </button>
               </div>
             ) : (
-              items.map((item) => (
-                <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50">
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
-                    <Image 
-                      src={item.image || "https://placehold.co/400x400/2c2769/white?text=No+Image"} 
-                      alt={item.name}
-                      fill
-                      className="object-contain p-1"
-                    />
-                  </div>
+              items.map((item) => {
+                const originalUnitPrice = item.originalPrice ?? item.price;
+                const hasCutPrice = originalUnitPrice > item.price;
 
-                  <div className="flex-1 flex flex-col justify-between min-w-0">
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{item.name}</h4>
-                      <p className="text-[11px] text-gray-400 mt-0.5 capitalize">{item.brand || item.category}</p>
+                return (
+                  <div key={item._id} className="flex gap-4 p-3 border border-gray-50 rounded-xl bg-gray-50/50">
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
+                      <Image 
+                        src={item.image || "https://placehold.co/400x400/2c2769/white?text=No+Image"} 
+                        alt={item.name}
+                        fill
+                        className="object-contain p-1"
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden">
-                        <button 
-                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                          className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
-                        >
-                          <Minus size={10} />
-                        </button>
-                        <span className="px-1.5 text-xs font-bold text-gray-700 min-w-[20px] text-center select-none">
-                          {item.quantity}
-                        </span>
-                        <button 
-                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
-                          disabled={item.quantity >= item.stock}
-                        >
-                          <Plus size={10} />
-                        </button>
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{item.name}</h4>
+                        <p className="text-[11px] text-gray-400 mt-0.5 capitalize">{item.brand || item.category}</p>
                       </div>
 
-                      <span className="text-xs sm:text-sm font-bold text-[#2c2769]">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
-                    </div>
-                  </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden">
+                          <button 
+                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                            className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
+                          >
+                            <Minus size={10} />
+                          </button>
+                          <span className="px-1.5 text-xs font-bold text-gray-700 min-w-[20px] text-center select-none">
+                            {item.quantity}
+                          </span>
+                          <button 
+                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                            className="p-1 px-1.5 hover:bg-gray-50 text-gray-500 transition-colors cursor-pointer"
+                            disabled={item.quantity >= item.stock}
+                          >
+                            <Plus size={10} />
+                          </button>
+                        </div>
 
-                  <button 
-                    onClick={() => removeItem(item._id)}
-                    className="self-start text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))
+                        <div className="flex items-baseline gap-1.5">
+                          {hasCutPrice && (
+                            <span className="text-[10px] text-gray-400 line-through font-medium">
+                              {formatPrice(originalUnitPrice * item.quantity)}
+                            </span>
+                          )}
+                          <span className="text-xs sm:text-sm font-bold text-[#2c2769]">
+                            {formatPrice(item.price * item.quantity)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => removeItem(item._id)}
+                      className="self-start text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
 
           {/* Footer Section */}
           {items.length > 0 && (
             <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-3 mb-14 md:mb-0">
+              {totalSavings > 0 && (
+                <div className="flex items-center justify-between text-xs font-bold text-green-600">
+                  <span>You're Saving</span>
+                  <span>{formatPrice(totalSavings)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between font-bold text-gray-900 mb-1">
                 <span className="text-sm">Subtotal</span>
                 <span className="text-lg text-[#2c2769]">{formatPrice(totalPrice())}</span>

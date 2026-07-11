@@ -242,6 +242,16 @@ export default function CheckoutPage() {
 
   const selectedItems = items.filter((item) => selectedItemIds.includes(item._id));
   const basePrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Original (pre-discount) price total for the selected items, and how much
+  // the shopper is saving from product-level discounts — kept completely
+  // separate from any coupon discount applied below.
+  const originalSubtotal = selectedItems.reduce(
+    (sum, item) => sum + (item.originalPrice ?? item.price) * item.quantity,
+    0
+  );
+  const productSavings = Math.max(0, originalSubtotal - basePrice);
+
   const deliveryCharge = getDeliveryCharge();
   const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
@@ -441,10 +451,16 @@ export default function CheckoutPage() {
           name: item.name,
           qty: item.quantity,
           unitPrice: item.price,
+          // Original (pre-discount) unit price — kept alongside the selling
+          // price so the admin order view can show the same "Total Price /
+          // Product Savings / Payable" breakdown as the storefront checkout.
+          originalUnitPrice: item.originalPrice ?? item.price,
         })),
         deliveryCharge: deliveryCharge || 0,
+        productSavings,
         discountAmount: discount,
         couponCode: appliedCoupon,
+        paymentMethod: "Cash on Delivery (COD)",
       };
 
       const res = await fetch("/api/orders", {
@@ -636,38 +652,51 @@ export default function CheckoutPage() {
             <h2 className="text-base font-bold text-gray-800 pb-2 border-b border-gray-50 mb-3">Cart Products</h2>
 
             <div className="divide-y divide-gray-50 max-h-60 overflow-y-auto pr-1 space-y-2 mb-3">
-              {items.map((item) => (
-                <div key={item._id} className="flex items-center justify-between py-2.5 gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <input type="checkbox" checked={selectedItemIds.includes(item._id)} onChange={() => handleToggleItemSelection(item._id)} className="w-4 h-4 rounded text-[#2c2769] accent-[#2c2769] cursor-pointer" />
-                    <div className="relative w-10 h-10 border border-gray-100 rounded-lg overflow-hidden bg-white flex-shrink-0">
-                      <Image src={item.image} alt={item.name} fill className="object-contain p-0.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                          className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer"
-                        >
-                          <Minus size={10} />
-                        </button>
-                        <span className="text-[10px] font-bold text-gray-700 min-w-[16px] text-center">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          disabled={item.quantity >= item.stock}
-                          className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <Plus size={10} />
-                        </button>
+              {items.map((item) => {
+                const originalUnitPrice = item.originalPrice ?? item.price;
+                const hasCutPrice = originalUnitPrice > item.price;
+
+                return (
+                  <div key={item._id} className="flex items-center justify-between py-2.5 gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <input type="checkbox" checked={selectedItemIds.includes(item._id)} onChange={() => handleToggleItemSelection(item._id)} className="w-4 h-4 rounded text-[#2c2769] accent-[#2c2769] cursor-pointer" />
+                      <div className="relative w-10 h-10 border border-gray-100 rounded-lg overflow-hidden bg-white flex-shrink-0">
+                        <Image src={item.image} alt={item.name} fill className="object-contain p-0.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                            className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer"
+                          >
+                            <Minus size={10} />
+                          </button>
+                          <span className="text-[10px] font-bold text-gray-700 min-w-[16px] text-center">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                            disabled={item.quantity >= item.stock}
+                            className="w-5 h-5 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#2c2769] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Plus size={10} />
+                          </button>
+                        </div>
                       </div>
                     </div>
+
+                    <div className="flex items-baseline gap-1.5 whitespace-nowrap flex-shrink-0">
+                      {hasCutPrice && (
+                        <span className="text-[10px] text-gray-400 line-through font-medium">
+                          {formatPrice(originalUnitPrice * item.quantity)}
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-gray-700">{formatPrice(item.price * item.quantity)}</span>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-gray-700 whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-b border-gray-50 py-3 mb-3 space-y-2">
@@ -704,9 +733,34 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            {/* Price breakdown: Total Price -> Product Savings (from discounted
+                items) -> Subtotal -> Coupon Discount (kept separate) ->
+                Delivery -> Payable Amount -> Payment Method */}
             <div className="space-y-2 text-xs text-gray-600 mb-4">
-              <div className="flex justify-between"><span>Subtotal (Selected)</span><span className="font-bold text-gray-800">{formatPrice(basePrice)}</span></div>
-              {discount > 0 && <div className="flex justify-between text-green-600 font-bold"><span>Discount</span><span>-{formatPrice(discount)}</span></div>}
+              <div className="flex justify-between">
+                <span>Total Price</span>
+                <span className="font-bold text-gray-800">{formatPrice(originalSubtotal)}</span>
+              </div>
+
+              {productSavings > 0 && (
+                <div className="flex justify-between text-green-600 font-bold">
+                  <span>Product Savings</span>
+                  <span>-{formatPrice(productSavings)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span className="font-bold text-gray-800">{formatPrice(basePrice)}</span>
+              </div>
+
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600 font-bold">
+                  <span>Coupon Discount</span>
+                  <span>-{formatPrice(discount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between">
                 <span>Delivery Charge</span>
                 {deliveryCharge !== null ? (
@@ -715,7 +769,16 @@ export default function CheckoutPage() {
                   <span className="text-[11px] text-orange-500 font-medium">Select area first</span>
                 )}
               </div>
-              <div className="border-t border-gray-100 pt-2 flex justify-between font-black text-gray-900 text-sm"><span>Total</span><span className="text-[#2c2769]">{formatPrice(grandTotal)}</span></div>
+
+              <div className="border-t border-gray-100 pt-2 flex justify-between font-black text-gray-900 text-sm">
+                <span>Payable Amount</span>
+                <span className="text-[#2c2769]">{formatPrice(grandTotal)}</span>
+              </div>
+
+              <div className="flex justify-between items-center pt-1 text-[11px] text-gray-500">
+                <span>Payment Method</span>
+                <span className="font-bold text-gray-700">Cash on Delivery (COD)</span>
+              </div>
             </div>
 
             <button type="button" onClick={() => handleSubmitOrder()} disabled={isSubmitting || (selectedItemIds.length > 0 && deliveryCharge === null) || selectedItemIds.length === 0} className="w-full bg-[#2c2769] text-white font-bold py-3 rounded-xl text-xs transition-all hidden md:block disabled:opacity-50">
@@ -727,7 +790,7 @@ export default function CheckoutPage() {
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl p-3 z-[99999] flex items-center justify-between gap-4">
         <div className="flex flex-col">
-          <span className="text-[10px] text-gray-400 font-bold uppercase">Grand Total</span>
+          <span className="text-[10px] text-gray-400 font-bold uppercase">Payable Amount</span>
           <span className="text-base font-black text-[#2c2769] leading-tight">{formatPrice(grandTotal)}</span>
         </div>
         <button type="button" onClick={() => handleSubmitOrder()} disabled={isSubmitting || (selectedItemIds.length > 0 && deliveryCharge === null) || selectedItemIds.length === 0} className="flex-1 bg-[#2c2769] text-white font-black py-3 rounded-xl text-center text-sm disabled:opacity-40">
