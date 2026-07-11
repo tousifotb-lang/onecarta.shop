@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, User, ArrowRight, X, CheckCircle, Phone } from "lucide-react";
 
@@ -10,6 +11,8 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const router = useRouter();
+
   const [isLogin, setIsLogin] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
 
@@ -178,9 +181,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           return;
         }
 
+        // লগইন সফল হলে ইউজার যেখানে ছিল সেখানেই থাকবে — dashboard-এ redirect করা হবে না।
+        // signIn(redirect:false) নিজেই client-side session update করে দেয় (NextAuth
+        // এর SessionProvider context share করা সব useSession() consumer, যেমন Navbar-এর
+        // account button, automatically re-render হয়ে login state দেখাবে)। router.refresh()
+        // শুধু current page-এর কোনো server component session-dependent data থাকলে সেটাও
+        // sync রাখার জন্য — কোনো navigation/URL change হয় না।
         setLoading(false);
         onClose();
-        setTimeout(() => { window.location.href = "/dashboard"; }, 100);
+        router.refresh();
       } catch (err) {
         setError("Something went wrong. Please try again.");
         setLoading(false);
