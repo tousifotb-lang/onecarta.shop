@@ -66,23 +66,42 @@ const STEP_INTERVAL_MS = 2800;
 // we've crossed into the duplicated set and need to snap back invisibly.
 const STEP_SETTLE_MS = 650;
 
+// The flex gap between cards, in pixels — must match the `gap-4` class below
+// (1rem = 16px) since we use it in both the CSS width calc and the JS scroll math.
+const GAP_PX = 16;
+
+// Card width classes — mirror the original static grid's breakpoints
+// (grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6, gap-4) exactly,
+// using calc() so each card is the *same pixel size* as before, not just an
+// approximate percentage. This keeps the shrunk-to-6-cards desktop look intact.
+const CARD_WIDTH_CLASSES =
+  "flex-shrink-0 " +
+  "w-[calc((100%-16px)/2)] " +
+  "sm:w-[calc((100%-32px)/3)] " +
+  "md:w-[calc((100%-48px)/4)] " +
+  "lg:w-[calc((100%-80px)/6)]";
+
 function FlashSaleCarousel({ products }: { products: Product[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const firstSetRef = useRef<HTMLDivElement>(null);
   const isPausedRef = useRef(false);
 
   useEffect(() => {
     const container = scrollRef.current;
-    const firstSet = firstSetRef.current;
-    if (!container || !firstSet) return;
+    if (!container) return;
 
     const interval = setInterval(() => {
       if (isPausedRef.current) return;
 
-      const singleSetWidth = firstSet.scrollWidth;
-      // Average per-card width (including its share of the gap) — computed
-      // fresh every tick so it stays correct across responsive breakpoints
-      // and doesn't need a separate width measurement per card.
+      // Measure real rendered widths directly from the DOM — no reliance on
+      // guessing how percentages resolve, so this stays correct across
+      // every breakpoint and if the window gets resized.
+      const children = Array.from(container.children) as HTMLElement[];
+      if (children.length < products.length) return;
+
+      const firstSetChildren = children.slice(0, products.length);
+      const singleSetWidth =
+        firstSetChildren.reduce((sum, el) => sum + el.offsetWidth, 0) +
+        GAP_PX * firstSetChildren.length;
       const step = singleSetWidth / products.length;
 
       container.scrollTo({ left: container.scrollLeft + step, behavior: "smooth" });
@@ -101,8 +120,6 @@ function FlashSaleCarousel({ products }: { products: Product[] }) {
     return () => clearInterval(interval);
   }, [products.length]);
 
-  const cardWidthClasses = "w-[46%] sm:w-[31%] md:w-[23%] lg:w-[15.6%] flex-shrink-0";
-
   return (
     <div
       ref={scrollRef}
@@ -110,20 +127,11 @@ function FlashSaleCarousel({ products }: { products: Product[] }) {
       onMouseLeave={() => { isPausedRef.current = false; }}
       className="flex overflow-hidden gap-4"
     >
-      <div ref={firstSetRef} className="flex gap-4 flex-shrink-0">
-        {products.map((p) => (
-          <div key={`set-a-${p._id}`} className={cardWidthClasses}>
-            <ProductCard product={p} />
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-4 flex-shrink-0">
-        {products.map((p) => (
-          <div key={`set-b-${p._id}`} className={cardWidthClasses}>
-            <ProductCard product={p} />
-          </div>
-        ))}
-      </div>
+      {[...products, ...products].map((p, idx) => (
+        <div key={`${idx < products.length ? "a" : "b"}-${p._id}`} className={CARD_WIDTH_CLASSES}>
+          <ProductCard product={p} />
+        </div>
+      ))}
     </div>
   );
 }
