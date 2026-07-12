@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   Heart, ShoppingCart, Trash2, ArrowLeft,
-  PackageOpen, Lock, Loader2
+  PackageOpen, Lock, Loader2, Share2, Check
 } from "lucide-react";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useCartStore } from "@/store/cartStore";
@@ -14,12 +14,11 @@ import { useAuthModalStore } from "@/store/authModalStore";
 export default function WishlistPage() {
   const [mounted, setMounted] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
-  // ✅ localStorage flag বাদ দিয়ে real NextAuth session দিয়ে login state চেক করা
-  // হচ্ছে — বাকি সব component (Navbar, ProductDetailPage) এভাবেই করে, তাই এখন
-  // consistent থাকবে এবং login করা থাকলেও "Login Required" আর দেখাবে না।
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isLoggedIn = mounted && status === "authenticated";
+  const userId = (session?.user as any)?.id as string | undefined;
 
   const { fetchWishlist, toggleWishlist, getWishlistItems, loaded } = useWishlistStore();
   const { addItem } = useCartStore();
@@ -29,9 +28,6 @@ export default function WishlistPage() {
     setMounted(true);
   }, []);
 
-  // Navbar-ও session authenticated হলে fetchWishlist কল করে, কিন্তু direct এই
-  // page-এ এসে পড়লে (deep link/refresh) race condition এড়াতে এখানেও নিশ্চিত
-  // করে নেওয়া হচ্ছে যে wishlist data লোড হয়েছে।
   useEffect(() => {
     if (isLoggedIn && !loaded) {
       fetchWishlist();
@@ -54,16 +50,10 @@ export default function WishlistPage() {
     });
   };
 
-  // WishlistItem already store-এ আছে মানে toggleWishlist কল করলে এটা remove
-  // হয়ে যাবে (add/remove দুটোই একই function দিয়ে হ্যান্ডেল হয়) — এবং এটা
-  // backend-এও DELETE কল করে দেয়, শুধু local state না।
   const handleRemove = (item: ReturnType<typeof getWishlistItems>[number]) => {
     toggleWishlist(item);
   };
 
-  // clearWishlist() শুধু local state clear করে, backend-এ কিছু delete করে না —
-  // তাই এখানে প্রতিটা item-এর উপর toggleWishlist চালিয়ে backend থেকেও
-  // সবগুলো সরিয়ে দেওয়া হচ্ছে, নাহলে refresh দিলে সব ফিরে আসবে।
   const handleClearAll = async () => {
     setClearing(true);
     try {
@@ -76,7 +66,34 @@ export default function WishlistPage() {
     }
   };
 
-  // Session status এখনো resolve হচ্ছে — flash of wrong state এড়াতে loading দেখানো
+  // Shareable link — userId session থেকে আসে, তাই এটা public
+  // /wishlist/shared/[userId] route-এ point করে যা login ছাড়াই দেখা যায়।
+  const handleShare = async () => {
+    if (!userId) return;
+    const shareUrl = `${window.location.origin}/wishlist/shared/${userId}`;
+
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: "My Onecarta Wishlist",
+          text: "Check out my wishlist on Onecarta!",
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // user cancelled the native share sheet — fall through to clipboard copy
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy wishlist link:", err);
+    }
+  };
+
   if (!mounted || status === "loading") {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -85,7 +102,6 @@ export default function WishlistPage() {
     );
   }
 
-  // 🔐 Login Wall — login না থাকলে এটা দেখাবে
   if (!isLoggedIn) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center pb-24 md:pb-0">
@@ -121,34 +137,45 @@ export default function WishlistPage() {
     <main className="min-h-screen bg-gray-50 pb-24 md:pb-8">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-gray-400 hover:text-gray-700 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="text-gray-400 hover:text-gray-700 transition-colors shrink-0">
               <ArrowLeft size={20} />
             </Link>
-            <div className="flex items-center gap-2">
-              <Heart size={20} className="text-red-500 fill-red-500" />
-              <h1 className="text-lg font-black text-gray-800 uppercase tracking-wide">
+            <div className="flex items-center gap-2 min-w-0">
+              <Heart size={20} className="text-red-500 fill-red-500 shrink-0" />
+              <h1 className="text-lg font-black text-gray-800 uppercase tracking-wide truncate">
                 My Wishlist
               </h1>
               {items.length > 0 && (
-                <span className="bg-[#1a1a2e] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-[#1a1a2e] text-white text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
                   {items.length}
                 </span>
               )}
             </div>
           </div>
 
-          {items.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              disabled={clearing}
-              className="text-xs font-bold text-red-400 hover:text-red-600 flex items-center gap-1.5 transition-colors disabled:opacity-50"
-            >
-              {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              {clearing ? "Clearing..." : "Clear All"}
-            </button>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            {items.length > 0 && (
+              <button
+                onClick={handleShare}
+                className="text-xs font-bold text-[#1a1a2e] hover:text-[#2c2769] flex items-center gap-1.5 transition-colors"
+              >
+                {shareCopied ? <Check size={14} className="text-green-500" /> : <Share2 size={14} />}
+                {shareCopied ? "Link Copied!" : "Share"}
+              </button>
+            )}
+            {items.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="text-xs font-bold text-red-400 hover:text-red-600 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {clearing ? "Clearing..." : "Clear All"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
