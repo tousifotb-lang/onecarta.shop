@@ -143,11 +143,24 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponError, setCouponError] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [freeDeliveryApplied, setFreeDeliveryApplied] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  // Admin-controlled delivery rates (Manage Store → Delivery Charges). Defaults
+  // match the original hardcoded values, so checkout never breaks before the
+  // fetch resolves or if the settings API is unreachable.
+  const [deliveryRates, setDeliveryRates] = useState({ insideDhaka: 80, specialZone: 100, outsideDhaka: 120 });
 
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
   const reapplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/delivery")
+      .then((r) => r.json())
+      .then((d) => { if (d.rates) setDeliveryRates(d.rates); })
+      .catch(() => {});
+  }, []);
 
   // লগইন থাকলে real backend থেকে saved address profile গুলো আনা হচ্ছে — localStorage না
   const loadUserAddresses = async () => {
@@ -230,14 +243,18 @@ export default function CheckoutPage() {
     );
   };
 
+  // Admin-controlled rates (Manage Store → Delivery Charges) drive the zone
+  // pricing below. If a coupon with an active free-delivery benefit is
+  // applied, this always returns 0 once an address has been selected.
   const getDeliveryCharge = () => {
     if (selectedItemIds.length === 0) return 0;
     if (!formData.district || !formData.thana) return null;
+    if (freeDeliveryApplied) return 0;
     if (formData.district === "Dhaka") {
-      if (formData.thana === "Savar" || formData.thana === "Keranigonj") return 100;
-      return 80;
+      if (formData.thana === "Savar" || formData.thana === "Keranigonj") return deliveryRates.specialZone;
+      return deliveryRates.insideDhaka;
     }
-    return 120;
+    return deliveryRates.outsideDhaka;
   };
 
   const selectedItems = items.filter((item) => selectedItemIds.includes(item._id));
@@ -255,14 +272,14 @@ export default function CheckoutPage() {
   const deliveryCharge = getDeliveryCharge();
   const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
-  // NEW: phone param add kora holo — per-user coupon usage limit check korar jonno
-  // backend e phone number pathano lagbe. Phone empty thakleo call korte kono somossha
-  // nai, backend e eta gracefully skip hoy (limit check shudhu phone thakle hoy).
+  // isDhaka lets the backend know whether "Inside Dhaka Only" free-delivery
+  // coupons should apply — matched against the currently selected district.
   const validateCoupon = async (
     code: string,
     currentSubtotal: number,
     currentDeliveryCharge: number | null,
-    phone: string
+    phone: string,
+    isDhaka: boolean
   ) => {
     const res = await fetch("/api/promo-codes/validate", {
       method: "POST",
@@ -272,9 +289,10 @@ export default function CheckoutPage() {
         subtotal: currentSubtotal,
         deliveryCharge: currentDeliveryCharge ?? 0,
         phone,
+        isDhaka,
       }),
     });
-    return res.json() as Promise<{ valid: boolean; code?: string; discount?: number; error?: string }>;
+    return res.json() as Promise<{ valid: boolean; code?: string; discount?: number; freeDelivery?: boolean; error?: string }>;
   };
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
@@ -292,10 +310,12 @@ export default function CheckoutPage() {
 
     setIsApplyingCoupon(true);
     try {
-      const data = await validateCoupon(code, basePrice, deliveryCharge, formData.phone);
+      const isDhaka = formData.district === "Dhaka";
+      const data = await validateCoupon(code, basePrice, deliveryCharge, formData.phone, isDhaka);
       if (data.valid && data.code && typeof data.discount === "number") {
         setAppliedCoupon(data.code);
         setDiscount(data.discount);
+        setFreeDeliveryApplied(!!data.freeDelivery);
         setCouponCode("");
       } else {
         setCouponError(data.error || "Invalid coupon code.");
@@ -307,24 +327,31 @@ export default function CheckoutPage() {
     }
   };
 
+  // Coupon-er subtotal ba delivery-eligibility-related field (like district,
+  // free-delivery scope match) change hole revalidate kora hoy, jate stale
+  // discount/free-delivery state na thake.
   useEffect(() => {
     if (!appliedCoupon) return;
 
     if (basePrice <= 0) {
       setAppliedCoupon(null);
       setDiscount(0);
+      setFreeDeliveryApplied(false);
       return;
     }
 
     if (reapplyTimerRef.current) clearTimeout(reapplyTimerRef.current);
     reapplyTimerRef.current = setTimeout(async () => {
       try {
-        const data = await validateCoupon(appliedCoupon, basePrice, deliveryCharge, formData.phone);
+        const isDhaka = formData.district === "Dhaka";
+        const data = await validateCoupon(appliedCoupon, basePrice, deliveryCharge, formData.phone, isDhaka);
         if (data.valid && typeof data.discount === "number") {
           setDiscount(data.discount);
+          setFreeDeliveryApplied(!!data.freeDelivery);
         } else {
           setAppliedCoupon(null);
           setDiscount(0);
+          setFreeDeliveryApplied(false);
           setCouponError(data.error || "Coupon removed — it no longer applies to your order.");
         }
       } catch {
@@ -336,7 +363,7 @@ export default function CheckoutPage() {
       if (reapplyTimerRef.current) clearTimeout(reapplyTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePrice]);
+  }, [basePrice, formData.district]);
 
   if (!mounted || status === "loading") {
     return <div className="container-main py-20 text-center text-gray-500">Loading Checkout...</div>;
@@ -355,6 +382,7 @@ export default function CheckoutPage() {
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setDiscount(0);
+    setFreeDeliveryApplied(false);
     setCouponError("");
   };
 
@@ -727,7 +755,12 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-xs text-green-700 font-bold">
-                  <span>Code {appliedCoupon} Applied!</span>
+                  <span className="flex items-center gap-1.5 flex-wrap">
+                    Code {appliedCoupon} Applied!
+                    {freeDeliveryApplied && (
+                      <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide">Free Delivery</span>
+                    )}
+                  </span>
                   <button type="button" onClick={handleRemoveCoupon} className="text-gray-400 hover:text-red-500 font-bold">Remove</button>
                 </div>
               )}
@@ -764,7 +797,11 @@ export default function CheckoutPage() {
               <div className="flex justify-between">
                 <span>Delivery Charge</span>
                 {deliveryCharge !== null ? (
-                  <span className="font-bold text-gray-800">{formatPrice(deliveryCharge)}</span>
+                  freeDeliveryApplied ? (
+                    <span className="font-bold text-green-600">FREE</span>
+                  ) : (
+                    <span className="font-bold text-gray-800">{formatPrice(deliveryCharge)}</span>
+                  )
                 ) : (
                   <span className="text-[11px] text-orange-500 font-medium">Select area first</span>
                 )}

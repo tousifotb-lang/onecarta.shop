@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import PromoCode from "@/models/PromoCode";
 
-// Calculates the taka discount for a given promo + cart subtotal.
 function calculateDiscount(
   promo: {
     discountType: "flat" | "upto";
@@ -41,10 +40,6 @@ function calculateDiscount(
   return { discount };
 }
 
-// Counts how many past orders this phone number has placed using this coupon code.
-// Uses a raw collection query (rather than an Order model import) so this route
-// doesn't depend on the exact Order schema shape — it just needs the
-// `customerPhone` / `couponCode` field names, which the checkout payload already uses.
 async function getCustomerUsageCount(normalizedPhone: string, codeName: string): Promise<number> {
   const db = mongoose.connection.db;
   if (!db) return 0;
@@ -54,17 +49,14 @@ async function getCustomerUsageCount(normalizedPhone: string, codeName: string):
   });
 }
 
-// POST: Validate a promo code entered at checkout against the shared
-// `promocodes` collection (same MongoDB database the admin panel writes to).
-//
-// Body: { code: string, subtotal: number, deliveryCharge: number | null, phone?: string }
-// Returns: { valid: true, code, discount } on success
-//          { valid: false, error: string } on failure
+// Body: { code, subtotal, deliveryCharge, phone, isDhaka }
+// isDhaka — true jodi customer-er selected district "Dhaka" hoy, jate
+// "Inside Dhaka Only" scope-er free-delivery coupon thik jaygay apply hoy.
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    const { code, subtotal, deliveryCharge, phone } = await req.json();
+    const { code, subtotal, deliveryCharge, phone, isDhaka } = await req.json();
 
     if (!code || typeof code !== "string" || !code.trim()) {
       return NextResponse.json({ valid: false, error: "Please enter a coupon code." }, { status: 400 });
@@ -82,7 +74,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: "This coupon is no longer active." }, { status: 400 });
     }
 
-    // Expiry check — expiryDate stored as "YYYY-MM-DD" string, or "" for no expiry
     if (promo.expiryDate) {
       const expiry = new Date(promo.expiryDate + "T23:59:59");
       if (!isNaN(expiry.getTime()) && expiry.getTime() < Date.now()) {
@@ -90,11 +81,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Per-customer usage limit check — matched by phone number, since checkout
-    // supports both guest and logged-in flows and phone is the one identifier
-    // both share. If phone isn't available yet (e.g. guest hasn't filled the
-    // address form), this check is skipped here — final enforcement happens
-    // again at order placement time.
     const normalizedPhone = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
     if (promo.hasUsageLimit && normalizedPhone) {
       const limit = Number(promo.usageLimitPerUser) || 0;
@@ -131,12 +117,24 @@ export async function POST(req: NextRequest) {
     let discount = Math.min(result.discount, chargeable);
     discount = Math.round(discount);
 
-    if (discount <= 0) {
+    // Free delivery — independent benefit. "all" scope always applies;
+    // "dhaka" scope only applies when the order is shipping within Dhaka.
+    const freeDeliveryEligible =
+      !!promo.freeDelivery &&
+      (promo.freeDeliveryScope === "all" || (promo.freeDeliveryScope === "dhaka" && !!isDhaka));
+
+    if (discount <= 0 && !freeDeliveryEligible) {
+      if (promo.freeDelivery && promo.freeDeliveryScope === "dhaka" && !isDhaka) {
+        return NextResponse.json(
+          { valid: false, error: "This coupon offers free delivery only within Dhaka." },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ valid: false, error: "This coupon does not apply to your order." }, { status: 400 });
     }
 
     return NextResponse.json(
-      { valid: true, code: promo.codeName, discount },
+      { valid: true, code: promo.codeName, discount, freeDelivery: freeDeliveryEligible },
       { status: 200 }
     );
   } catch (error) {
