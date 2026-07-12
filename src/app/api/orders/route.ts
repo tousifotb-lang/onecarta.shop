@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 import PromoCode from "@/models/PromoCode";
+import Product from "@/models/Product";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,26 @@ export async function POST(req: Request) {
       statusHistory: [{ status: "Placed", changedAt: createdAt }],
       note: normalizedCouponCode ? `Coupon applied: ${normalizedCouponCode}` : "",
     });
+
+    // ---- Decrement stock (and bump sold count) for every purchased item ----
+    // Runs after the order is successfully created. The $gte guard prevents
+    // stock from ever going negative if two orders race for the last units —
+    // whichever request loses the race simply skips that item's decrement
+    // rather than erroring the whole order out (the order itself is already
+    // placed at this point; a stock mismatch here is stock-team's/investigation
+    // territory, not a reason to fail the customer's checkout).
+    await Promise.all(
+      items
+        .filter((item: any) => item.productId)
+        .map((item: any) =>
+          Product.updateOne(
+            { _id: item.productId, stock: { $gte: Number(item.qty) } },
+            { $inc: { stock: -Number(item.qty), sold: Number(item.qty) } }
+          ).catch((err: unknown) => {
+            console.error(`Failed to decrement stock for product ${item.productId}:`, err);
+          })
+        )
+    );
 
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error: any) {

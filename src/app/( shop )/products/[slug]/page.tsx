@@ -238,6 +238,9 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<"specs" | "description" | "reviews">("specs");
   const [mounted, setMounted] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+  
+  // ── Share state ─────────────────────────────────────────────────────────
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // ── Zoom on hover (main image) ──────────────────────────────────────────
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -415,6 +418,15 @@ export default function ProductDetailPage() {
       setReviewSubmitError(err.message || "Something went wrong");
     } finally {
       setSubmittingReview(false);
+    }
+  };
+  
+  // ── Handling Share ────────────────────────────────────────────────────────
+  const handleShare = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
     }
   };
 
@@ -629,7 +641,7 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Quantity */}
+          {/* Quantity — supports both +/- buttons and direct typing */}
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-700">Quantity:</span>
             <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
@@ -639,9 +651,27 @@ export default function ProductDetailPage() {
               >
                 <Minus size={16} />
               </button>
-              <span className="px-5 py-2 text-sm font-bold border-x border-gray-200 min-w-[50px] text-center">
-                {quantity}
-              </span>
+              <input
+                type="number"
+                min={1}
+                max={product.stock}
+                value={quantity}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setQuantity(1);
+                    return;
+                  }
+                  const parsed = parseInt(raw, 10);
+                  if (isNaN(parsed)) return;
+                  setQuantity(Math.min(Math.max(1, parsed), Math.max(1, product.stock)));
+                }}
+                onBlur={() => {
+                  // Snap back to a valid value if the field was left empty or out of range
+                  setQuantity((q) => Math.min(Math.max(1, q), Math.max(1, product.stock)));
+                }}
+                className="w-16 px-2 py-2 text-sm font-bold border-x border-gray-200 text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
               <button
                 onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
                 className="px-3 py-2 hover:bg-gray-100 transition-colors text-gray-600"
@@ -708,8 +738,16 @@ export default function ProductDetailPage() {
                 />
               </button>
 
-              <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                <Share2 size={20} className="text-gray-400" />
+              <button
+                onClick={handleShare}
+                className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors relative"
+                title={linkCopied ? "Link copied!" : "Share this product"}
+              >
+                {linkCopied ? (
+                  <Check size={20} className="text-green-500" />
+                ) : (
+                  <Share2 size={20} className="text-gray-400" />
+                )}
               </button>
             </div>
 
