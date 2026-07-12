@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
+import "@/models/Product"; // ⚠️ Product model কে সরাসরি এখানে import করা হচ্ছে —
+// এটা কোথাও ব্যবহার হচ্ছে না মনে হলেও, এটা ছাড়া .populate("wishlist") fail করবে।
+// কারণ: User.wishlist field-এ ref: "Product" আছে, কিন্তু Vercel-এ প্রতিটা API
+// route আলাদা serverless function বান্ডেল হয় — যদি এই নির্দিষ্ট route-এর বান্ডেলে
+// Product schema কখনো import/register না হয়, তাহলে Mongoose populate করার
+// সময় "MissingSchemaError: Schema hasn't been registered for model Product"
+// ছুঁড়ে দেয়, যেটা silently crash করে "Failed to load wishlist" দেখায়।
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

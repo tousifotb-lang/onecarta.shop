@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
+import "@/models/Product";
 
 // এই route টা যেন কখনোই cache না হয়, প্রতিবার fresh data fetch করে
 export const dynamic = "force-dynamic";
