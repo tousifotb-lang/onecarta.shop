@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ShoppingCart, Heart, Share2, Star,
-  ChevronRight, Minus, Plus, Check, ArrowRight
+  ChevronRight, Minus, Plus, Check, ArrowRight, ZoomIn
 } from "lucide-react";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
@@ -239,6 +239,23 @@ export default function ProductDetailPage() {
   const [mounted, setMounted] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
 
+  // ── Zoom on hover (main image) ──────────────────────────────────────────
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPosition({
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y)),
+    });
+  };
+
   // ── Reviews state ─────────────────────────────────────────────────────────
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [reviewBreakdown, setReviewBreakdown] = useState<Record<number, number>>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
@@ -262,6 +279,11 @@ export default function ProductDetailPage() {
     if (!slug) return;
     fetchProduct();
   }, [slug]);
+
+  // Thumbnail switch করলে জুম স্টেট রিসেট — না হলে নতুন ছবিতে পুরনো zoom position/state আটকে থাকতে পারে
+  useEffect(() => {
+    setIsZooming(false);
+  }, [selectedImage]);
 
   const fetchReviews = async (productId: string) => {
     setReviewsLoading(true);
@@ -506,7 +528,13 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         {/* Image Section */}
         <div className="space-y-3">
-          <div className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden h-96">
+          <div
+            ref={imageContainerRef}
+            onMouseEnter={() => setIsZooming(true)}
+            onMouseLeave={() => setIsZooming(false)}
+            onMouseMove={handleImageMouseMove}
+            className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden h-96 cursor-zoom-in"
+          >
               {discountPercent > 0 && (
                 <span className="absolute top-4 left-4 z-10 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
                   -{discountPercent}% OFF
@@ -517,12 +545,22 @@ export default function ProductDetailPage() {
                   ⚡ Flash Sale
                 </span>
               )}
+              {!isZooming && (
+                <span className="absolute bottom-4 right-4 z-10 bg-black/50 backdrop-blur-sm text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-full flex items-center gap-1.5 pointer-events-none">
+                  <ZoomIn size={13} /> Hover to zoom
+                </span>
+              )}
               <Image
                 src={images[selectedImage]}
                 alt={productName}
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain p-6 transition-all duration-300"
+                className="object-contain p-6"
+                style={{
+                  transform: isZooming ? "scale(2.2)" : "scale(1)",
+                  transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                  transition: isZooming ? "none" : "transform 0.25s ease-out",
+                }}
               />
             </div>
 
