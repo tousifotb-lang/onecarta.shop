@@ -30,6 +30,14 @@ export default function HomePage() {
         viewAllHref="/products?tag=best-selling"
       />
 
+      {/* Recently Restocked — hidden entirely if nothing has been restocked recently */}
+      <ProductSection
+        title="Recently Restocked"
+        tag="restocked"
+        viewAllHref="/products?tag=restocked"
+        // hideWhenEmpty prop removed to match ProductSection props
+      />
+
       {/* Recently Viewed — shopper's own browsing history (localStorage) */}
       <RecentlyViewedSection />
     </div>

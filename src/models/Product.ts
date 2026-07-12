@@ -22,6 +22,7 @@ export interface IProduct extends Document {
   isBestSelling: boolean;
   flashSalePrice?: number;
   flashSaleEnds?: Date;
+  restockedAt?: Date;
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -47,6 +48,7 @@ const ProductSchema = new Schema<IProduct>(
     isBestSelling: { type: Boolean, default: false },
     flashSalePrice: { type: Number },
     flashSaleEnds: { type: Date },
+    restockedAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -55,6 +57,7 @@ ProductSchema.index({ name: "text", description: "text", brand: "text" });
 ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ categoryId: 1, isActive: 1 });
 ProductSchema.index({ tags: 1 });
+ProductSchema.index({ restockedAt: -1 });
 
 export default mongoose.models.Product ||
   mongoose.model<IProduct>("Product", ProductSchema);
