@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Heart, ShoppingCart, Trash2, ArrowLeft,
-  PackageOpen, Lock
+  PackageOpen, Lock, Loader2
 } from "lucide-react";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useCartStore } from "@/store/cartStore";
@@ -12,16 +13,30 @@ import { useAuthModalStore } from "@/store/authModalStore";
 
 export default function WishlistPage() {
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
-  const { getWishlistItems, removeFromWishlist, clearWishlist } = useWishlistStore();
+  // ✅ localStorage flag বাদ দিয়ে real NextAuth session দিয়ে login state চেক করা
+  // হচ্ছে — বাকি সব component (Navbar, ProductDetailPage) এভাবেই করে, তাই এখন
+  // consistent থাকবে এবং login করা থাকলেও "Login Required" আর দেখাবে না।
+  const { status } = useSession();
+  const isLoggedIn = mounted && status === "authenticated";
+
+  const { fetchWishlist, toggleWishlist, getWishlistItems, loaded } = useWishlistStore();
   const { addItem } = useCartStore();
   const { openModal } = useAuthModalStore();
 
   useEffect(() => {
     setMounted(true);
-    setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
   }, []);
+
+  // Navbar-ও session authenticated হলে fetchWishlist কল করে, কিন্তু direct এই
+  // page-এ এসে পড়লে (deep link/refresh) race condition এড়াতে এখানেও নিশ্চিত
+  // করে নেওয়া হচ্ছে যে wishlist data লোড হয়েছে।
+  useEffect(() => {
+    if (isLoggedIn && !loaded) {
+      fetchWishlist();
+    }
+  }, [isLoggedIn, loaded, fetchWishlist]);
 
   const items = mounted && isLoggedIn ? getWishlistItems() : [];
 
@@ -32,15 +47,46 @@ export default function WishlistPage() {
       slug: item.slug,
       image: item.image,
       price: item.price,
-      originalPrice: item.originalPrice,
-      category: item.category,
-      brand: item.brand,
-      stock: item.stock,
+      originalPrice: item.originalPrice ?? item.price,
+      category: item.category ?? "",
+      brand: item.brand ?? "",
+      stock: item.stock ?? 0,
     });
   };
 
+  // WishlistItem already store-এ আছে মানে toggleWishlist কল করলে এটা remove
+  // হয়ে যাবে (add/remove দুটোই একই function দিয়ে হ্যান্ডেল হয়) — এবং এটা
+  // backend-এও DELETE কল করে দেয়, শুধু local state না।
+  const handleRemove = (item: ReturnType<typeof getWishlistItems>[number]) => {
+    toggleWishlist(item);
+  };
+
+  // clearWishlist() শুধু local state clear করে, backend-এ কিছু delete করে না —
+  // তাই এখানে প্রতিটা item-এর উপর toggleWishlist চালিয়ে backend থেকেও
+  // সবগুলো সরিয়ে দেওয়া হচ্ছে, নাহলে refresh দিলে সব ফিরে আসবে।
+  const handleClearAll = async () => {
+    setClearing(true);
+    try {
+      const currentItems = getWishlistItems();
+      for (const item of currentItems) {
+        await toggleWishlist(item);
+      }
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  // Session status এখনো resolve হচ্ছে — flash of wrong state এড়াতে loading দেখানো
+  if (!mounted || status === "loading") {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-gray-300" />
+      </main>
+    );
+  }
+
   // 🔐 Login Wall — login না থাকলে এটা দেখাবে
-  if (mounted && !isLoggedIn) {
+  if (!isLoggedIn) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center pb-24 md:pb-0">
         <div className="flex flex-col items-center text-center px-6 max-w-sm">
@@ -95,10 +141,12 @@ export default function WishlistPage() {
 
           {items.length > 0 && (
             <button
-              onClick={clearWishlist}
-              className="text-xs font-bold text-red-400 hover:text-red-600 flex items-center gap-1.5 transition-colors"
+              onClick={handleClearAll}
+              disabled={clearing}
+              className="text-xs font-bold text-red-400 hover:text-red-600 flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
-              <Trash2 size={14} /> Clear All
+              {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              {clearing ? "Clearing..." : "Clear All"}
             </button>
           )}
         </div>
@@ -125,65 +173,70 @@ export default function WishlistPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {items.map((item) => (
-                <div
-                  key={item._id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
-                >
-                  <div className="relative aspect-square bg-gray-50">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.png";
-                      }}
-                    />
-                    <button
-                      onClick={() => removeFromWishlist(item._id)}
-                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"
-                    >
-                      <Heart size={14} className="fill-red-500 text-red-500" />
-                    </button>
-                    {item.originalPrice > item.price && (
-                      <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-lg">
-                        -{Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}%
-                      </span>
-                    )}
-                  </div>
+              {items.map((item) => {
+                const originalPrice = item.originalPrice ?? item.price;
+                const stock = item.stock ?? 0;
 
-                  <div className="p-3">
-                    <Link href={`/products/${item.slug}`}>
-                      <h3 className="text-xs font-bold text-gray-800 line-clamp-2 hover:text-[#1a1a2e] transition-colors mb-1.5">
-                        {item.name}
-                      </h3>
-                    </Link>
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <span className="text-sm font-black text-[#1a1a2e]">
-                        ৳{item.price.toLocaleString()}
-                      </span>
-                      {item.originalPrice > item.price && (
-                        <span className="text-[10px] text-gray-400 line-through">
-                          ৳{item.originalPrice.toLocaleString()}
+                return (
+                  <div
+                    key={item._id}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
+                  >
+                    <div className="relative aspect-square bg-gray-50">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.png";
+                        }}
+                      />
+                      <button
+                        onClick={() => handleRemove(item)}
+                        className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"
+                      >
+                        <Heart size={14} className="fill-red-500 text-red-500" />
+                      </button>
+                      {originalPrice > item.price && (
+                        <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-lg">
+                          -{Math.round(((originalPrice - item.price) / originalPrice) * 100)}%
                         </span>
                       )}
                     </div>
-                    {item.stock <= 5 && item.stock > 0 && (
-                      <p className="text-[10px] text-orange-500 font-bold mb-1.5">
-                        Only {item.stock} left!
-                      </p>
-                    )}
-                    <button
-                      onClick={() => handleAddToCart(item)}
-                      disabled={item.stock === 0}
-                      className="w-full flex items-center justify-center gap-1.5 bg-[#1a1a2e] hover:bg-[#111122] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-[11px] font-bold py-2 rounded-xl transition-colors"
-                    >
-                      <ShoppingCart size={13} />
-                      {item.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                    </button>
+
+                    <div className="p-3">
+                      <Link href={`/products/${item.slug}`}>
+                        <h3 className="text-xs font-bold text-gray-800 line-clamp-2 hover:text-[#1a1a2e] transition-colors mb-1.5">
+                          {item.name}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center gap-1.5 mb-2.5">
+                        <span className="text-sm font-black text-[#1a1a2e]">
+                          ৳{item.price.toLocaleString()}
+                        </span>
+                        {originalPrice > item.price && (
+                          <span className="text-[10px] text-gray-400 line-through">
+                            ৳{originalPrice.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      {stock > 0 && stock <= 5 && (
+                        <p className="text-[10px] text-orange-500 font-bold mb-1.5">
+                          Only {stock} left!
+                        </p>
+                      )}
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        disabled={stock === 0}
+                        className="w-full flex items-center justify-center gap-1.5 bg-[#1a1a2e] hover:bg-[#111122] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-[11px] font-bold py-2 rounded-xl transition-colors"
+                      >
+                        <ShoppingCart size={13} />
+                        {stock === 0 ? "Out of Stock" : "Add to Cart"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-8 text-center">
