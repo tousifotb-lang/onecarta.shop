@@ -498,10 +498,13 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Order placement failed");
+        if (!res.ok) throw new Error(data.error || "Order placement failed");
 
-      clearCart?.();
-      router.push("/order-success");
+        clearCart?.();
+        // Real, DB-e save hoya order ID ta query param hishebe pass kora hocche, jate
+        // order-success page fake/random ID generate na kore actual order-ta-i dekhay —
+        // nahole admin panel-e ekrokom, customer-er screen-e onnorokom ID dekha jay.
+        router.push(`/order-success?orderId=${encodeURIComponent(data.orderId)}`);
     } catch (err: any) {
       setSubmitError(err.message || "Something went wrong while placing your order.");
       setIsSubmitting(false);

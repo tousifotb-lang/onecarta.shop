@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { CheckCircle2, ShoppingBag, ArrowRight, Calendar } from "lucide-react";
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const router = useRouter();
-  const { clearCart } = useCartStore(); // Getting clear cart controller here
-  const [orderId, setOrderId] = useState("");
+  const searchParams = useSearchParams();
+  const { clearCart } = useCartStore();
   const [currentDate, setCurrentDate] = useState("");
 
-  useEffect(() => {
-    // Clear the cart inside the success page render safely
-    clearCart();
+  // Checkout page order create howar por real, DB-e save hoya orderId ta
+  // query param diye pass kore — admin panel-e jei ID dekha jay, customer-er
+  // screen-eo thik shei ID-i dekhabe.
+  const orderId = searchParams.get("orderId");
 
-    // Generating a realistic mockup order ID
-    const randomId = "OC" + Math.floor(100000 + Math.random() * 900000);
-    setOrderId(randomId);
+  useEffect(() => {
+    clearCart();
 
     const date = new Date().toLocaleDateString("en-US", {
       year: "numeric",
@@ -26,6 +26,23 @@ export default function OrderSuccessPage() {
     });
     setCurrentDate(date);
   }, [clearCart]);
+
+  // Keu jodi direct URL-e /order-success e chole ashe (orderId chara), tahole
+  // fake ID banano hobe na — বরং redirect kore dewa hobe home-e.
+  useEffect(() => {
+    if (!orderId) {
+      const timer = setTimeout(() => router.push("/"), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [orderId, router]);
+
+  if (!orderId) {
+    return (
+      <div className="container-main py-16 md:py-24 max-w-2xl text-center">
+        <p className="text-sm text-gray-400">Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container-main py-16 md:py-24 max-w-2xl text-center">
@@ -45,7 +62,7 @@ export default function OrderSuccessPage() {
         <div className="w-full bg-gray-50/80 border border-gray-100 rounded-2xl p-4 md:p-6 mb-8 text-left grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Order ID</span>
-            <span className="text-sm font-extrabold text-[#2c2769] font-mono">{orderId || "Loading..."}</span>
+            <span className="text-sm font-extrabold text-[#2c2769] font-mono">#{orderId}</span>
           </div>
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Date Placed</span>
@@ -81,5 +98,13 @@ export default function OrderSuccessPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div className="container-main py-16 md:py-24 max-w-2xl text-center text-sm text-gray-400">Loading...</div>}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
