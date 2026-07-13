@@ -8,8 +8,9 @@ import {
   MapPin, Trash2, Search, ChevronDown,
   PlusCircle, User, Package, Heart, Settings,
   LogOut, ChevronRight, Mail, X, CheckCircle2,
-  Loader2, AlertCircle
+  Loader2, AlertCircle, RefreshCw
 } from "lucide-react";
+import { useCartStore } from "@/store/cartStore";
 
 interface SavedAddress {
   _id: string;
@@ -135,10 +136,23 @@ const districtList = Object.keys(locationData).sort();
 
 const NON_CANCELLABLE_STATUSES = ["Delivered", "Completed", "Cancelled", "Returned"];
 
+// Product images may come back either as plain strings or { url } objects,
+// same as the rest of the storefront (product detail page uses this pattern).
+function getImageUrl(image: unknown): string {
+  if (!image) return "";
+  if (typeof image === "string") return image;
+  if (typeof image === "object" && image !== null && "url" in (image as any)) {
+    return (image as any).url;
+  }
+  return "";
+}
+
 export default function DashboardPage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
+
+  const { addItem, openCart } = useCartStore();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -170,6 +184,10 @@ export default function DashboardPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const [deleteAddressTargetId, setDeleteAddressTargetId] = useState<string | null>(null);
+
+  // ── Reorder state ──────────────────────────────────────────────────────
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [reorderResult, setReorderResult] = useState<{ added: number; unavailable: string[] } | null>(null);
 
   const [settingsName, setSettingsName] = useState("");
   const [settingsPhone, setSettingsPhone] = useState("");
@@ -263,6 +281,79 @@ export default function DashboardPage() {
       setCancelError(err.message);
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  // Looks up current price/stock/slug/image for every productId in the order
+  // (a batch call, not one-per-item), then adds whatever's still purchasable
+  // to the cart. Items with a deleted product, or one that's now out of
+  // stock/inactive, are skipped and reported back instead of silently failing.
+  const handleReorder = async (order: Order) => {
+    setReorderingId(order._id);
+    setReorderResult(null);
+
+    try {
+      const productIds = order.items
+        .map((item) => item.productId)
+        .filter((id): id is string => !!id);
+
+      const productsById: Record<string, any> = {};
+
+      if (productIds.length > 0) {
+        const res = await fetch("/api/products/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: productIds }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          (data.products || []).forEach((p: any) => {
+            productsById[String(p._id)] = p;
+          });
+        }
+      }
+
+      let addedCount = 0;
+      const unavailable: string[] = [];
+
+      order.items.forEach((item) => {
+        const product = item.productId ? productsById[item.productId] : null;
+
+        if (!product || product.isActive === false || !product.stock || product.stock <= 0) {
+          unavailable.push(item.name);
+          return;
+        }
+
+        const displayPrice =
+          product.isFlashSale && product.flashSalePrice ? product.flashSalePrice : product.price;
+        const qtyToAdd = Math.min(item.qty, product.stock);
+
+        addItem(
+          {
+            _id: product._id,
+            name: product.name || product.title || item.name,
+            slug: product.slug,
+            image: getImageUrl(product.images?.[0]),
+            price: displayPrice,
+            originalPrice: product.originalPrice ?? displayPrice,
+            category: product.category || "",
+            brand: product.brand || "",
+            stock: product.stock,
+          },
+          qtyToAdd
+        );
+        addedCount += 1;
+      });
+
+      setReorderResult({ added: addedCount, unavailable });
+      if (addedCount > 0) {
+        openCart();
+      }
+    } catch (err) {
+      console.error("Reorder failed:", err);
+      setReorderResult({ added: 0, unavailable: order.items.map((i) => i.name) });
+    } finally {
+      setReorderingId(null);
     }
   };
 
@@ -516,6 +607,27 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-400 mt-0.5 font-medium">Expand any order to see its live tracking timeline.</p>
                 </div>
 
+                {reorderResult && (
+                  <div
+                    className={`text-xs font-bold p-3.5 rounded-xl flex items-start justify-between gap-3 ${
+                      reorderResult.added > 0
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        : "bg-red-50 text-red-600 border border-red-100"
+                    }`}
+                  >
+                    <span>
+                      {reorderResult.added > 0 && `${reorderResult.added} item(s) added to your cart. `}
+                      {reorderResult.unavailable.length > 0 &&
+                        `${reorderResult.unavailable.length} item(s) no longer available: ${reorderResult.unavailable.join(", ")}.`}
+                      {reorderResult.added === 0 && reorderResult.unavailable.length === 0 &&
+                        "None of the items in this order could be re-added."}
+                    </span>
+                    <button onClick={() => setReorderResult(null)} className="shrink-0 hover:opacity-70 cursor-pointer">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 {orders.length === 0 ? (
                   <div className="text-center py-16 text-gray-400 text-sm font-medium italic border border-dashed border-gray-200 rounded-xl bg-gray-50/40">
                     You haven't placed any orders yet.
@@ -527,6 +639,7 @@ export default function DashboardPage() {
                       const isPaid = order.paymentStatus === "PAID";
                       const canCancel = !NON_CANCELLABLE_STATUSES.includes(order.deliveryStatus);
                       const itemsLabel = order.items.map((i) => `${i.name} (x${i.qty})`).join(", ");
+                      const isReordering = reorderingId === order._id;
 
                       return (
                         <div key={order._id} className="border border-gray-100 rounded-xl overflow-hidden shadow-sm bg-white">
@@ -561,6 +674,15 @@ export default function DashboardPage() {
                                 }`}>
                                   {order.deliveryStatus}
                                 </span>
+
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleReorder(order); }}
+                                  disabled={isReordering}
+                                  className="text-xs font-bold bg-[#1f4294] hover:bg-[#16337a] text-white px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                                >
+                                  {isReordering ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                  {isReordering ? "Adding..." : "Reorder"}
+                                </button>
 
                                 {canCancel && (
                                   <button
