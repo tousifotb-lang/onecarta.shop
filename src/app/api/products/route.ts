@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     const categorySlug = searchParams.get("category"); // legacy/slug-based filter
     const tag = searchParams.get("tag");
     const search = searchParams.get("search");
-    const sort = searchParams.get("sort") || "createdAt";
+    const sortParam = searchParams.get("sort");
     const order = searchParams.get("order") || "desc";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -98,11 +98,9 @@ export async function GET(req: NextRequest) {
       const descendantIds = await getDescendantCategoryIds(resolvedCategoryId);
 
       // Legacy safety net: some products were created before the categoryId
-      // field existed and only ever got the plain `category` NAME string
-      // (e.g. "Smartphones"). Those would otherwise silently vanish from
-      // every category page even though they clearly belong there. Catch
-      // them too — but only when categoryId is genuinely missing, so we
-      // never double-count a product that already has a proper categoryId.
+      // field existed and only ever got the plain `category` NAME string.
+      // Catch those too — but only when categoryId is genuinely missing, so
+      // we never double-count a product that already has a proper categoryId.
       const descendantDocs = await Category.find({ _id: { $in: descendantIds } })
         .select("name")
         .lean();
@@ -112,16 +110,13 @@ export async function GET(req: NextRequest) {
       if (descendantNames.length > 0) {
         const namePattern = descendantNames.map(escapeRegex).join("|");
         categoryOr.push({
-          categoryId: null, // matches both missing AND explicitly-null categoryId
+          categoryId: null,
           category: { $regex: `^(${namePattern})$`, $options: "i" },
         });
       }
 
       query.$or = categoryOr;
     } else if (categorySlug) {
-      // No matching category document found at all for this slug — fall
-      // back to a direct slug-vs-name compare as a last resort (kept for
-      // backward compatibility with any very old direct callers).
       query.category = categorySlug;
     }
 
@@ -129,6 +124,16 @@ export async function GET(req: NextRequest) {
     if (tag === "featured") query.isFeatured = true;
     if (tag === "best-selling") query.isBestSelling = true;
     if (tag === "new") query.createdAt = { $exists: true };
+
+    // Recently Restocked — products that went from out-of-stock back to
+    // in-stock within the last 30 days.
+    if (tag === "restocked") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      query.restockedAt = { $gte: thirtyDaysAgo };
+      query.stock = { $gt: 0 };
+    }
+
     if (brand) query.brand = brand;
 
     if (minPrice || maxPrice) {
@@ -145,7 +150,7 @@ export async function GET(req: NextRequest) {
       const candidates = await Product.find(query)
         .select(
           "name title slug price originalPrice discount images category brand description " +
-          "isFeatured isFlashSale isBestSelling stock sold rating reviewCount createdAt"
+          "isFeatured isFlashSale isBestSelling stock sold rating reviewCount createdAt restockedAt"
         )
         .lean();
 
@@ -166,7 +171,8 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Normal (non-search) path — unchanged sort/filter/paginate ──────────
-    const sortObj: Record<string, 1 | -1> = { [sort]: order === "asc" ? 1 : -1 };
+    const sortField = sortParam || (tag === "restocked" ? "restockedAt" : "createdAt");
+    const sortObj: Record<string, 1 | -1> = { [sortField]: order === "asc" ? 1 : -1 };
 
     const [products, total] = await Promise.all([
       Product.find(query).sort(sortObj).skip(skip).limit(limit).lean(),
