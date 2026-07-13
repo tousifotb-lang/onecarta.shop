@@ -247,7 +247,7 @@ useEffect(() => {
             <div className="container-main flex items-center justify-between">
               <div className="flex items-center gap-1 text-gray-600 font-medium">
                 <Phone size={12} />
-                <span>01303223513</span>
+                <span>+8809611576269</span>
               </div>
               <div className="flex items-center gap-4 text-gray-600 font-medium">
                 <Link href="/track-order" className="flex items-center gap-1 hover:text-[#2c2769]"><Package size={12} /> ORDER STATUS</Link>
