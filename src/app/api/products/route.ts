@@ -6,9 +6,6 @@ import { getDescendantCategoryIds } from "@/lib/categoryTree";
 
 // ── Fuzzy search helpers ─────────────────────────────────────────────────────
 
-// Standard edit-distance calculation — counts how many single-character
-// changes (insert/delete/swap) turn one word into another. Used to catch
-// typos like "iphon" -> "iphone" or "hedphone" -> "headphone".
 function levenshtein(a: string, b: string): number {
   const matrix: number[][] = [];
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -20,9 +17,9 @@ function levenshtein(a: string, b: string): number {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
         );
       }
     }
@@ -30,8 +27,6 @@ function levenshtein(a: string, b: string): number {
   return matrix[b.length][a.length];
 }
 
-// Scores a single product against the search term. Higher = more relevant.
-// 0 means "not a match at all" and gets filtered out.
 function scoreProduct(product: any, searchTerm: string): number {
   const term = searchTerm.toLowerCase().trim();
   const name = (product.name || product.title || "").toLowerCase();
@@ -41,7 +36,6 @@ function scoreProduct(product: any, searchTerm: string): number {
 
   if (!term) return 0;
 
-  // ── Tier 1: strong direct matches ──
   if (name === term) return 100;
   if (name.startsWith(term)) return 95;
 
@@ -49,16 +43,11 @@ function scoreProduct(product: any, searchTerm: string): number {
   if (nameWords.some((w: string) => w.startsWith(term))) return 90;
   if (name.includes(term)) return 85;
 
-  // ── Tier 2: brand / category matches ──
   if (brand === term || brand.includes(term)) return 75;
   if (category === term || category.includes(term)) return 65;
 
-  // ── Tier 3: description match (weakest direct match) ──
   if (description.includes(term)) return 50;
 
-  // ── Tier 4: typo tolerance — compare the search term against each word
-  // in the product name using edit distance. Allows ~1 typo per 3 letters,
-  // capped at 3 edits so very short/long mismatches don't false-positive.
   let bestDistance = Infinity;
   for (const word of nameWords) {
     if (Math.abs(word.length - term.length) > 3) continue;
@@ -74,6 +63,8 @@ function scoreProduct(product: any, searchTerm: string): number {
   return 0;
 }
 
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // GET: Fetch all products from MongoDB
 export async function GET(req: NextRequest) {
   try {
@@ -84,7 +75,7 @@ export async function GET(req: NextRequest) {
     const categorySlug = searchParams.get("category"); // legacy/slug-based filter
     const tag = searchParams.get("tag");
     const search = searchParams.get("search");
-    const sortParam = searchParams.get("sort");
+    const sort = searchParams.get("sort") || "createdAt";
     const order = searchParams.get("order") || "desc";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -105,9 +96,32 @@ export async function GET(req: NextRequest) {
 
     if (resolvedCategoryId) {
       const descendantIds = await getDescendantCategoryIds(resolvedCategoryId);
-      query.categoryId = { $in: descendantIds };
+
+      // Legacy safety net: some products were created before the categoryId
+      // field existed and only ever got the plain `category` NAME string
+      // (e.g. "Smartphones"). Those would otherwise silently vanish from
+      // every category page even though they clearly belong there. Catch
+      // them too — but only when categoryId is genuinely missing, so we
+      // never double-count a product that already has a proper categoryId.
+      const descendantDocs = await Category.find({ _id: { $in: descendantIds } })
+        .select("name")
+        .lean();
+      const descendantNames = descendantDocs.map((c: any) => c.name).filter(Boolean);
+
+      const categoryOr: Record<string, unknown>[] = [{ categoryId: { $in: descendantIds } }];
+      if (descendantNames.length > 0) {
+        const namePattern = descendantNames.map(escapeRegex).join("|");
+        categoryOr.push({
+          categoryId: null, // matches both missing AND explicitly-null categoryId
+          category: { $regex: `^(${namePattern})$`, $options: "i" },
+        });
+      }
+
+      query.$or = categoryOr;
     } else if (categorySlug) {
-      // Fallback for older products that only ever got the plain string field
+      // No matching category document found at all for this slug — fall
+      // back to a direct slug-vs-name compare as a last resort (kept for
+      // backward compatibility with any very old direct callers).
       query.category = categorySlug;
     }
 
@@ -115,17 +129,6 @@ export async function GET(req: NextRequest) {
     if (tag === "featured") query.isFeatured = true;
     if (tag === "best-selling") query.isBestSelling = true;
     if (tag === "new") query.createdAt = { $exists: true };
-
-    // Recently Restocked — products that went from out-of-stock back to
-    // in-stock within the last 30 days. The window keeps this section from
-    // showing a restock that happened months ago and is no longer "news".
-    if (tag === "restocked") {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      query.restockedAt = { $gte: thirtyDaysAgo };
-      query.stock = { $gt: 0 };
-    }
-
     if (brand) query.brand = brand;
 
     if (minPrice || maxPrice) {
@@ -138,15 +141,11 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // ── Search path: relevance-ranked with typo tolerance ──────────────────
-    // Instead of a plain regex $or (which returns matches in arbitrary order
-    // and misses typos entirely), pull the filtered candidate set and score
-    // each product's relevance in-app, then sort by that score. This stays
-    // fast for catalogs up to a few thousand products.
     if (search && search.trim()) {
       const candidates = await Product.find(query)
         .select(
           "name title slug price originalPrice discount images category brand description " +
-          "isFeatured isFlashSale isBestSelling stock sold rating reviewCount createdAt restockedAt"
+          "isFeatured isFlashSale isBestSelling stock sold rating reviewCount createdAt"
         )
         .lean();
 
@@ -167,10 +166,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Normal (non-search) path — unchanged sort/filter/paginate ──────────
-    // Restocked tag defaults to sorting by most-recently-restocked first
-    // unless the caller explicitly asked for a different sort field.
-    const sortField = sortParam || (tag === "restocked" ? "restockedAt" : "createdAt");
-    const sortObj: Record<string, 1 | -1> = { [sortField]: order === "asc" ? 1 : -1 };
+    const sortObj: Record<string, 1 | -1> = { [sort]: order === "asc" ? 1 : -1 };
 
     const [products, total] = await Promise.all([
       Product.find(query).sort(sortObj).skip(skip).limit(limit).lean(),

@@ -128,7 +128,18 @@ export default function FilterSidebar({ filters, onChange, onReset, mode = "filt
   }, [mode, categoryId, filters.category]);
 
   const tree = useMemo(() => buildTree(categories), [categories]);
-  const expandedIds = useMemo(() => new Set(findPathToActive(tree, activeSlug)), [tree, activeSlug]);
+
+  // Which slug is "active" for the purpose of deciding which branches of the
+  // tree should auto-expand: in "navigate" mode (category pages) it's the
+  // activeSlug prop from the URL; in "filter" mode (shop page) there's no
+  // such prop — the selected radio (filters.category) IS the active slug.
+  // Without this, selecting a nested subcategory on the shop page collapsed
+  // its own parent branch and hid the very item that was just selected.
+  const effectiveActiveSlug = mode === "navigate" ? activeSlug : filters.category || undefined;
+  const expandedIds = useMemo(
+    () => new Set(findPathToActive(tree, effectiveActiveSlug)),
+    [tree, effectiveActiveSlug]
+  );
 
   const hasActiveFilters = filters.category || filters.minPrice || filters.brand;
 
