@@ -4,7 +4,8 @@ import Banner from "../../../models/Banner";
 
 // GET: Public banner list for the storefront homepage.
 // ?type=hero | side   -> filter by banner type
-// ?activeOnly=true    -> only banners the admin has marked active
+// ?activeOnly=true    -> only banners the admin marked active AND that are
+//   currently inside their scheduled window (if scheduling is enabled)
 export async function GET(request: Request) {
   try {
     await connectDB();
@@ -18,7 +19,21 @@ export async function GET(request: Request) {
       filter.type = type;
     }
     if (activeOnly === "true") {
+      const now = new Date();
       filter.isActive = true;
+      // Visible when scheduling is off, OR scheduling is on and "now" falls
+      // inside [startDate, endDate] — either bound may be empty, meaning
+      // "starts immediately" / "never expires" respectively.
+      filter.$or = [
+        { scheduleEnabled: { $ne: true } },
+        {
+          scheduleEnabled: true,
+          $and: [
+            { $or: [{ startDate: null }, { startDate: { $lte: now } }] },
+            { $or: [{ endDate: null }, { endDate: { $gte: now } }] },
+          ],
+        },
+      ];
     }
 
     const banners = await Banner.find(filter)
