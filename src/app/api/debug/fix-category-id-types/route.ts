@@ -1,45 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import mongoose from "mongoose";
 
-// TEMPORARY ONE-TIME MIGRATION ROUTE — delete after running once successfully.
-// Fixes products where categoryId was saved as a plain string (via admin's
-// raw MongoDB driver) instead of a real ObjectId (which storefront's
-// Mongoose $in query requires to actually match).
+// ONE-TIME MIGRATION — delete this file after running it once.
 //
-// Usage: GET /api/debug/fix-category-id-types?confirm=yes
-export async function GET(req: NextRequest) {
+// Fixes existing products whose `categoryId` was accidentally saved as a
+// plain STRING (via the admin Edit Product form) instead of a proper
+// MongoDB ObjectId. Those products silently vanish from every category
+// filter because BSON treats string and ObjectId as different types, even
+// when the value "looks" identical.
+//
+// Visit this URL once in the browser: /api/debug/fix-categoryid-types
+export async function GET() {
   try {
-    const confirm = req.nextUrl.searchParams.get("confirm");
-    if (confirm !== "yes") {
-      return NextResponse.json(
-        { error: "Add ?confirm=yes to the URL to actually run this migration." },
-        { status: 400 }
-      );
-    }
-
     await connectDB();
     const db = mongoose.connection.db;
     if (!db) {
       return NextResponse.json({ error: "No DB connection" }, { status: 500 });
     }
 
-    // Preview: how many docs currently have categoryId stored as a string
-    const stringCount = await db
-      .collection("products")
-      .countDocuments({ categoryId: { $type: "string" } });
+    const productsCol = db.collection("products");
 
-    // Aggregation-pipeline update (Mongo 4.2+): converts categoryId from
-    // string -> real ObjectId in place, only for docs where it's currently a string.
-    const result = await db.collection("products").updateMany(
-      { categoryId: { $type: "string" } },
-      [{ $set: { categoryId: { $toObjectId: "$categoryId" } } }]
-    );
+    // Find every product where categoryId exists but is stored as a string
+    const brokenProducts = await productsCol
+      .find({ categoryId: { $type: "string" } })
+      .project({ _id: 1, name: 1, categoryId: 1 })
+      .toArray();
+
+    let fixedCount = 0;
+    const fixedNames: string[] = [];
+
+    for (const product of brokenProducts) {
+      const rawId = String(product.categoryId);
+      if (!mongoose.Types.ObjectId.isValid(rawId)) continue;
+
+      await productsCol.updateOne(
+        { _id: product._id },
+        { $set: { categoryId: new mongoose.Types.ObjectId(rawId) } }
+      );
+      fixedCount += 1;
+      fixedNames.push(product.name);
+    }
 
     return NextResponse.json({
-      docsFoundWithStringCategoryId: stringCount,
-      matchedCount: result.matchedCount,
-      modifiedCount: result.modifiedCount,
+      totalFound: brokenProducts.length,
+      totalFixed: fixedCount,
+      fixedProductNames: fixedNames,
     });
   } catch (error) {
     console.error("Migration error:", error);
