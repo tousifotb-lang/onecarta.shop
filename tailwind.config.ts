@@ -29,7 +29,7 @@ const config: Config = {
         brand: "#2c2769",
       },
       fontFamily: {
-        sans: ["Oswald", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
     },
   },
