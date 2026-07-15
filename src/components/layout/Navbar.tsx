@@ -16,6 +16,7 @@ import CartDrawer from "@/components/cart/CartDrawer";
 import SearchBar from "./SearchBar";
 import LoginModal from "@/components/auth/LoginModal";
 import AnnouncementBar from "./AnnouncementBar";
+import NewUserSignupPopup from "./NewUserSignupPopup";
 
 // ── Category tree node — built at runtime from the flat /api/categories?all=true
 // response (each raw category carries a parentId). Replaces the old hardcoded
@@ -317,7 +318,7 @@ useEffect(() => {
                 <div className="hidden md:block">
                   {!isLoggedIn ? (
                     <button
-                      onClick={openModal}
+                      onClick={() => openModal()}
                       className="p-1.5 flex items-center gap-1.5 border border-[#a8a6d9] text-white hover:bg-[#a8a6d9] hover:text-[#1a1a2e] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                     >
                       <User size={16} /><span className="hidden lg:block text-xs font-bold">LOGIN</span>
@@ -643,6 +644,9 @@ useEffect(() => {
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
 
       <LoginModal isOpen={isAuthModalOpen} onClose={closeModal} />
+
+      {/* New-user signup popup — 10% first-order discount teaser */}
+      <NewUserSignupPopup />
 
     </header>
   );

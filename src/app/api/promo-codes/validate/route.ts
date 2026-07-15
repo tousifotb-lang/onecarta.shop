@@ -5,7 +5,7 @@ import PromoCode from "@/models/PromoCode";
 
 function calculateDiscount(
   promo: {
-    discountType: "flat" | "upto";
+    discountType: "flat" | "upto" | "percentage";
     flatAmount: string;
     basePercentage: string;
     maxDiscountValue: string;
@@ -22,6 +22,25 @@ function calculateDiscount(
     return { discount: Number(promo.flatAmount) || 0 };
   }
 
+  if (promo.discountType === "percentage") {
+    // Straight % of subtotal, optionally capped — used for NEW10 etc.
+    const minPurchase = promo.hasMinPurchase ? Number(promo.minPurchaseValue) || 0 : 0;
+    if (minPurchase > 0 && subtotal < minPurchase) {
+      return { error: `Minimum purchase of ৳${minPurchase} required for this coupon.` };
+    }
+    const pct = Number(promo.basePercentage) || 0;
+    if (pct <= 0) {
+      return { error: "This coupon is misconfigured. Please contact support." };
+    }
+    let discount = (subtotal * pct) / 100;
+    const cap = Number(promo.maxDiscountValue) || 0;
+    if (cap > 0) {
+      discount = Math.min(discount, cap);
+    }
+    return { discount };
+  }
+
+  // "upto" — scaling percentage
   const minPurchase = Number(promo.minPurchaseValue) || 0;
   const maxDiscount = Number(promo.maxDiscountValue) || 0;
   const basePercentage = Number(promo.basePercentage) || 0;

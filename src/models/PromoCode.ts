@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPromoCode extends Document {
   codeName: string;
-  discountType: "flat" | "upto";
+  discountType: "flat" | "upto" | "percentage";
   flatAmount: string;
   basePercentage: string;
   maxDiscountValue: string;
@@ -19,7 +19,9 @@ export interface IPromoCode extends Document {
 const PromoCodeSchema = new Schema<IPromoCode>(
   {
     codeName: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    discountType: { type: String, enum: ["flat", "upto"], default: "flat" },
+    // "percentage" — straight % discount of subtotal, optionally capped by
+    // maxDiscountValue. Used for the NEW10 auto-applied first-order discount.
+    discountType: { type: String, enum: ["flat", "upto", "percentage"], default: "flat" },
     flatAmount: { type: String, default: "" },
     basePercentage: { type: String, default: "" },
     maxDiscountValue: { type: String, default: "" },
@@ -27,8 +29,6 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     minPurchaseValue: { type: String, default: "" },
     hasUsageLimit: { type: Boolean, default: false },
     usageLimitPerUser: { type: String, default: "" },
-    // NEW — free delivery benefit, independent of the flat/upto discount above.
-    // "dhaka" = only orders shipping within Dhaka get free delivery; "all" = always.
     freeDelivery: { type: Boolean, default: false },
     freeDeliveryScope: { type: String, enum: ["dhaka", "all", null], default: null },
     expiryDate: { type: String, default: "" },

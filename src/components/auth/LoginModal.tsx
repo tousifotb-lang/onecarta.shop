@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, User, ArrowRight, X, CheckCircle, Phone } from "lucide-react";
+import { useAuthModalStore } from "@/store/authModalStore";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
+  const { initialMode } = useAuthModalStore();
 
   const [isLogin, setIsLogin] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -37,6 +39,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
+
+  // Modal caller (jemon NewUserSignupPopup) je mode-e (login/signup) open
+  // korte cheyeche, shei onujayi form set kora hocche — "Sign Up & Get 10%
+  // Off" button-e click korle sidha registration tab-e open hobe.
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(initialMode !== "signup");
+    }
+  }, [isOpen, initialMode]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -182,11 +193,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         }
 
         // লগইন সফল হলে ইউজার যেখানে ছিল সেখানেই থাকবে — dashboard-এ redirect করা হবে না।
-        // signIn(redirect:false) নিজেই client-side session update করে দেয় (NextAuth
-        // এর SessionProvider context share করা সব useSession() consumer, যেমন Navbar-এর
-        // account button, automatically re-render হয়ে login state দেখাবে)। router.refresh()
-        // শুধু current page-এর কোনো server component session-dependent data থাকলে সেটাও
-        // sync রাখার জন্য — কোনো navigation/URL change হয় না।
         setLoading(false);
         onClose();
         router.refresh();

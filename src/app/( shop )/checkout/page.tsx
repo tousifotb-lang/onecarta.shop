@@ -146,6 +146,10 @@ export default function CheckoutPage() {
   const [freeDeliveryApplied, setFreeDeliveryApplied] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
+  // New-user auto-discount (NEW10) — shudhu ekbar-i attempt kora hobe, jate
+  // customer nijei coupon remove korle abar automatically ferot na ashe.
+  const [autoAppliedAttempted, setAutoAppliedAttempted] = useState(false);
+
   // Admin-controlled delivery rates (Manage Store → Delivery Charges). Defaults
   // match the original hardcoded values, so checkout never breaks before the
   // fetch resolves or if the settings API is unreachable.
@@ -364,6 +368,38 @@ export default function CheckoutPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePrice, formData.district]);
+
+  // NEW — Logged-in customer-er kono order age na thakle, checkout-e ashar
+  // shathe-shathe automatically NEW10 (10% new-user discount) apply hoye jay —
+  // customer-ke code type korte hoy na. Ekbar-i attempt hoy; customer nijei
+  // remove korle autoAppliedAttempted true thakay abar ashbe na.
+  useEffect(() => {
+    if (!isLoggedIn || autoAppliedAttempted || appliedCoupon || basePrice <= 0) return;
+
+    const tryAutoApplyNewUserDiscount = async () => {
+      setAutoAppliedAttempted(true);
+      try {
+        const ordersRes = await fetch("/api/orders/my-orders");
+        if (!ordersRes.ok) return;
+        const ordersData = await ordersRes.json();
+        const hasPriorOrders = Array.isArray(ordersData) && ordersData.length > 0;
+        if (hasPriorOrders) return;
+
+        const isDhaka = formData.district === "Dhaka";
+        const data = await validateCoupon("NEW10", basePrice, deliveryCharge, formData.phone, isDhaka);
+        if (data.valid && data.code && typeof data.discount === "number") {
+          setAppliedCoupon(data.code);
+          setDiscount(data.discount);
+          setFreeDeliveryApplied(!!data.freeDelivery);
+        }
+      } catch (err) {
+        console.error("Auto-apply new-user discount failed:", err);
+      }
+    };
+
+    tryAutoApplyNewUserDiscount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, basePrice]);
 
   if (!mounted || status === "loading") {
     return <div className="container-main py-20 text-center text-gray-500">Loading Checkout...</div>;
@@ -665,7 +701,7 @@ export default function CheckoutPage() {
 
               <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold p-3 rounded-xl flex items-center justify-between gap-3">
                 <span>Have an account? Sign in to use your saved addresses.</span>
-                <button type="button" onClick={openModal} className="font-black underline shrink-0">Sign In</button>
+                <button type="button" onClick={() => openModal()} className="font-black underline shrink-0">Sign In</button>
               </div>
 
               {renderAddressInputForm()}
@@ -759,7 +795,7 @@ export default function CheckoutPage() {
               ) : (
                 <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-xs text-green-700 font-bold">
                   <span className="flex items-center gap-1.5 flex-wrap">
-                    Code {appliedCoupon} Applied!
+                    {appliedCoupon === "NEW10" ? "🎉 New User 10% OFF Applied!" : `Code ${appliedCoupon} Applied!`}
                     {freeDeliveryApplied && (
                       <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide">Free Delivery</span>
                     )}
@@ -792,7 +828,7 @@ export default function CheckoutPage() {
 
               {discount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold">
-                  <span>Coupon Discount</span>
+                  <span>{appliedCoupon === "NEW10" ? "New User Discount" : "Coupon Discount"}</span>
                   <span>-{formatPrice(discount)}</span>
                 </div>
               )}
