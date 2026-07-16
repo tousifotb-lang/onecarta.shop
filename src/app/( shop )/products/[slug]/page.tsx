@@ -847,7 +847,7 @@ export default function ProductDetailPage() {
                 {!isLoggedIn ? (
                   <button
                     type="button"
-                    onClick={openModal}
+                    onClick={() => openModal()}
                     className="text-sm font-semibold text-[#2c2769] hover:underline cursor-pointer"
                   >
                     Sign in to write a review
