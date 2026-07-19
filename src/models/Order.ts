@@ -25,7 +25,7 @@ export interface IOrder extends Document {
   deliveryCharge: number;
   discountPercent: number;
   discountAmount: number;
-  couponCode?: string; // NEW — the actual field used for per-user usage-limit counting
+  couponCode?: string;
   vatPercent: number;
   vatAmount: number;
   itemsSubtotal: number;
@@ -38,6 +38,14 @@ export interface IOrder extends Document {
   statusHistory: IStatusHistoryEntry[];
   isFraud: boolean;
   note?: string;
+  // NEW — Loyalty Points: earned side (credited once the order reaches
+  // Delivered) and redeemed side (deducted immediately at checkout,
+  // refunded automatically if the order is later Cancelled/Returned).
+  pointsEarned: number;
+  pointsEarnedCredited: boolean;
+  pointsRedeemed: number;
+  pointsDiscountAmount: number;
+  pointsRedeemedRefunded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,7 +71,6 @@ const StatusHistorySchema = new Schema<IStatusHistoryEntry>(
 const OrderSchema = new Schema<IOrder>(
   {
     orderId: { type: String, required: true, unique: true },
-    // Optional — login করা অবস্থায় order place করলে set হবে। guest order গুলো শুধু phone দিয়েই match হবে।
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     customerName: { type: String, required: true },
     customerEmail: { type: String, default: "" },
@@ -75,9 +82,6 @@ const OrderSchema = new Schema<IOrder>(
     deliveryCharge: { type: Number, default: 0 },
     discountPercent: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
-    // Normalized (trim + uppercase) promo code actually applied to this order.
-    // This is the field per-user usage-limit counting queries against — it must
-    // always be saved as its own field, never just mentioned inside `note`.
     couponCode: { type: String, default: null },
     vatPercent: { type: Number, default: 0 },
     vatAmount: { type: Number, default: 0 },
@@ -93,6 +97,11 @@ const OrderSchema = new Schema<IOrder>(
     statusHistory: [StatusHistorySchema],
     isFraud: { type: Boolean, default: false },
     note: { type: String, default: "" },
+    pointsEarned: { type: Number, default: 0 },
+    pointsEarnedCredited: { type: Boolean, default: false },
+    pointsRedeemed: { type: Number, default: 0 },
+    pointsDiscountAmount: { type: Number, default: 0 },
+    pointsRedeemedRefunded: { type: Boolean, default: false },
   },
   { timestamps: true, collection: "orders" }
 );

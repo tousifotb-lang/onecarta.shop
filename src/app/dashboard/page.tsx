@@ -8,7 +8,7 @@ import {
   MapPin, Trash2, Search, ChevronDown,
   PlusCircle, User, Package, Heart, Settings,
   LogOut, ChevronRight, Mail, X, CheckCircle2,
-  Loader2, AlertCircle, RefreshCw
+  Loader2, AlertCircle, RefreshCw, Gift
 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 
@@ -55,6 +55,14 @@ interface WishlistProduct {
   discountPrice: number | null;
   images?: string[];
   slug: string;
+}
+
+interface LoyaltyTransaction {
+  _id: string;
+  type: "earned" | "redeemed" | "refunded";
+  points: number;
+  description: string;
+  createdAt: string;
 }
 
 interface UserProfile {
@@ -136,8 +144,6 @@ const districtList = Object.keys(locationData).sort();
 
 const NON_CANCELLABLE_STATUSES = ["Delivered", "Completed", "Cancelled", "Returned"];
 
-// Product images may come back either as plain strings or { url } objects,
-// same as the rest of the storefront (product detail page uses this pattern).
 function getImageUrl(image: unknown): string {
   if (!image) return "";
   if (typeof image === "string") return image;
@@ -157,6 +163,8 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [wishlist, setWishlist] = useState<WishlistProduct[]>([]);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState("");
 
@@ -185,7 +193,6 @@ export default function DashboardPage() {
   const [cancelError, setCancelError] = useState("");
   const [deleteAddressTargetId, setDeleteAddressTargetId] = useState<string | null>(null);
 
-  // ── Reorder state ──────────────────────────────────────────────────────
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [reorderResult, setReorderResult] = useState<{ added: number; unavailable: string[] } | null>(null);
 
@@ -207,10 +214,11 @@ export default function DashboardPage() {
     setLoadingData(true);
     setDataError("");
     try {
-      const [meRes, ordersRes, wishlistRes] = await Promise.all([
+      const [meRes, ordersRes, wishlistRes, loyaltyRes] = await Promise.all([
         fetch("/api/users/me"),
         fetch("/api/orders/my-orders"),
         fetch("/api/users/wishlist"),
+        fetch("/api/loyalty/me"),
       ]);
 
       if (!meRes.ok) throw new Error("Failed to load profile");
@@ -218,10 +226,13 @@ export default function DashboardPage() {
       const meData = await meRes.json();
       const ordersData = ordersRes.ok ? await ordersRes.json() : [];
       const wishlistData = wishlistRes.ok ? await wishlistRes.json() : [];
+      const loyaltyData = loyaltyRes.ok ? await loyaltyRes.json() : { balance: 0, transactions: [] };
 
       setProfile(meData);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setWishlist(Array.isArray(wishlistData) ? wishlistData : []);
+      setLoyaltyBalance(loyaltyData.balance || 0);
+      setLoyaltyTransactions(Array.isArray(loyaltyData.transactions) ? loyaltyData.transactions : []);
 
       setSettingsName(meData.name || "");
       setSettingsPhone(meData.phone || "");
@@ -284,10 +295,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Looks up current price/stock/slug/image for every productId in the order
-  // (a batch call, not one-per-item), then adds whatever's still purchasable
-  // to the cart. Items with a deleted product, or one that's now out of
-  // stock/inactive, are skipped and reported back instead of silently failing.
   const handleReorder = async (order: Order) => {
     setReorderingId(order._id);
     setReorderResult(null);
@@ -457,7 +464,6 @@ export default function DashboardPage() {
 
       setProfile((prev) => (prev ? { ...prev, ...data } : prev));
 
-      // Refresh the NextAuth session/JWT so the header dropdown shows the new name
       await update({ name: data.name, phone: data.phone });
 
       setProfileSavedOk(true);
@@ -512,6 +518,10 @@ export default function DashboardPage() {
               <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Wishlist</p>
               <p className="text-xl font-black text-red-500 mt-0.5">{wishlist.length}</p>
             </div>
+            <div className="bg-amber-50/70 border border-amber-100 rounded-xl px-5 py-3 text-center flex-1 md:flex-none">
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Points</p>
+              <p className="text-xl font-black text-amber-600 mt-0.5">{loyaltyBalance}</p>
+            </div>
           </div>
         </div>
 
@@ -535,6 +545,7 @@ export default function DashboardPage() {
               { id: "overview", label: "Overview Status", icon: <User size={16} /> },
               { id: "orders", label: "My Order History", icon: <Package size={16} /> },
               { id: "wishlist", label: "My Wishlist", icon: <Heart size={16} /> },
+              { id: "loyalty", label: "Loyalty Points", icon: <Gift size={16} /> },
               { id: "addresses", label: "Manage Addresses", icon: <MapPin size={16} /> },
               { id: "settings", label: "Profile Information", icon: <Settings size={16} /> },
             ].map((tab) => {
@@ -767,6 +778,50 @@ export default function DashboardPage() {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === "loyalty" && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-gray-100 pb-4">
+                  <h2 className="text-lg font-black text-gray-800 tracking-tight">Loyalty Points</h2>
+                  <p className="text-xs text-gray-400 mt-0.5 font-medium">
+                    Earn points on delivered orders, redeem them for discounts at checkout.
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-[#1f4294] to-[#16337a] rounded-2xl p-6 text-white flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wider text-white/70">Current Balance</p>
+                    <p className="text-3xl font-black mt-1">{loyaltyBalance} <span className="text-base font-bold text-white/70">points</span></p>
+                  </div>
+                  <Gift size={40} className="text-white/30" />
+                </div>
+
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Points History</p>
+                  {loyaltyTransactions.length === 0 ? (
+                    <div className="text-center py-16 text-gray-400 text-sm font-medium italic border border-dashed border-gray-200 rounded-xl bg-gray-50/40">
+                      No points activity yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {loyaltyTransactions.map((tx) => (
+                        <div key={tx._id} className="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3">
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{tx.description}</p>
+                            <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                              {new Date(tx.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                          <span className={`text-sm font-black ${tx.type === "redeemed" ? "text-red-500" : "text-emerald-600"}`}>
+                            {tx.type === "redeemed" ? "-" : "+"}{tx.points} pts
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

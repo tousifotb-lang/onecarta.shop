@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthModalStore } from "@/store/authModalStore";
 import { formatPrice } from "@/lib/utils";
-import { Truck, CreditCard, Search, ChevronDown, MapPin, Plus, Minus, X, Loader2 } from "lucide-react";
+import { Truck, CreditCard, Search, ChevronDown, MapPin, Plus, Minus, X, Loader2, Gift } from "lucide-react";
 
 interface SavedAddress {
   _id: string;
@@ -115,9 +115,6 @@ export default function CheckoutPage() {
     homeAddress: "",
   });
 
-  // Logged-in user er profile e kono saved address na thakle, checkout page e direct
-  // ei form dekhano hoy (guest form er moto). Checkbox diye customer chaile ei address
-  // ta profile e o save kore rakhte parbe future order er jonno.
   const [saveAddressToProfile, setSaveAddressToProfile] = useState(true);
   const [isSavingProfileAddress, setIsSavingProfileAddress] = useState(false);
 
@@ -146,14 +143,24 @@ export default function CheckoutPage() {
   const [freeDeliveryApplied, setFreeDeliveryApplied] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
-  // New-user auto-discount (NEW10) — shudhu ekbar-i attempt kora hobe, jate
-  // customer nijei coupon remove korle abar automatically ferot na ashe.
   const [autoAppliedAttempted, setAutoAppliedAttempted] = useState(false);
 
-  // Admin-controlled delivery rates (Manage Store → Delivery Charges). Defaults
-  // match the original hardcoded values, so checkout never breaks before the
-  // fetch resolves or if the settings API is unreachable.
   const [deliveryRates, setDeliveryRates] = useState({ insideDhaka: 80, specialZone: 100, outsideDhaka: 120 });
+
+  // Loyalty Points — admin-controlled rates + this customer's live balance.
+  // Redemption discount is computed live from balance/rates on every render,
+  // so it always tracks the current cart total automatically without needing
+  // a separate re-validate effect like the coupon does.
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [loyaltySettings, setLoyaltySettings] = useState({
+    isActive: false,
+    earnRateAmount: 100,
+    earnRatePoints: 1,
+    redeemPointsAmount: 100,
+    redeemValueAmount: 10,
+    minRedeemPoints: 100,
+  });
+  const [usePoints, setUsePoints] = useState(false);
 
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
@@ -166,7 +173,21 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
-  // লগইন থাকলে real backend থেকে saved address profile গুলো আনা হচ্ছে — localStorage না
+  useEffect(() => {
+    fetch("/api/settings/loyalty")
+      .then((r) => r.json())
+      .then((d) => setLoyaltySettings(d))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/loyalty/me")
+      .then((r) => r.json())
+      .then((d) => setLoyaltyBalance(d.balance || 0))
+      .catch(() => {});
+  }, [status]);
+
   const loadUserAddresses = async () => {
     setLoadingAddresses(true);
     try {
@@ -247,9 +268,6 @@ export default function CheckoutPage() {
     );
   };
 
-  // Admin-controlled rates (Manage Store → Delivery Charges) drive the zone
-  // pricing below. If a coupon with an active free-delivery benefit is
-  // applied, this always returns 0 once an address has been selected.
   const getDeliveryCharge = () => {
     if (selectedItemIds.length === 0) return 0;
     if (!formData.district || !formData.thana) return null;
@@ -264,9 +282,6 @@ export default function CheckoutPage() {
   const selectedItems = items.filter((item) => selectedItemIds.includes(item._id));
   const basePrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Original (pre-discount) price total for the selected items, and how much
-  // the shopper is saving from product-level discounts — kept completely
-  // separate from any coupon discount applied below.
   const originalSubtotal = selectedItems.reduce(
     (sum, item) => sum + (item.originalPrice ?? item.price) * item.quantity,
     0
@@ -274,10 +289,24 @@ export default function CheckoutPage() {
   const productSavings = Math.max(0, originalSubtotal - basePrice);
 
   const deliveryCharge = getDeliveryCharge();
-  const grandTotal = deliveryCharge !== null ? basePrice + deliveryCharge - discount : basePrice - discount;
 
-  // isDhaka lets the backend know whether "Inside Dhaka Only" free-delivery
-  // coupons should apply — matched against the currently selected district.
+  // Loyalty points redemption — capped both by the customer's balance AND by
+  // the order's own subtotal (after coupon discount), so points can never
+  // discount an order below zero or beyond what's being paid for products.
+  const maxPointsDiscountAllowed = Math.max(0, basePrice - discount);
+  const redeemableUnitsFromBalance =
+    loyaltySettings.redeemPointsAmount > 0 ? Math.floor(loyaltyBalance / loyaltySettings.redeemPointsAmount) : 0;
+  const redeemableUnitsFromCap =
+    loyaltySettings.redeemValueAmount > 0 ? Math.floor(maxPointsDiscountAllowed / loyaltySettings.redeemValueAmount) : 0;
+  const usableUnits = Math.max(0, Math.min(redeemableUnitsFromBalance, redeemableUnitsFromCap));
+  const pointsToRedeem = usePoints ? usableUnits * loyaltySettings.redeemPointsAmount : 0;
+  const pointsDiscountAmount = usePoints ? usableUnits * loyaltySettings.redeemValueAmount : 0;
+
+  const grandTotal =
+    deliveryCharge !== null
+      ? basePrice + deliveryCharge - discount - pointsDiscountAmount
+      : basePrice - discount - pointsDiscountAmount;
+
   const validateCoupon = async (
     code: string,
     currentSubtotal: number,
@@ -331,9 +360,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Coupon-er subtotal ba delivery-eligibility-related field (like district,
-  // free-delivery scope match) change hole revalidate kora hoy, jate stale
-  // discount/free-delivery state na thake.
   useEffect(() => {
     if (!appliedCoupon) return;
 
@@ -369,10 +395,6 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePrice, formData.district]);
 
-  // NEW — Logged-in customer-er kono order age na thakle, checkout-e ashar
-  // shathe-shathe automatically NEW10 (10% new-user discount) apply hoye jay —
-  // customer-ke code type korte hoy na. Ekbar-i attempt hoy; customer nijei
-  // remove korle autoAppliedAttempted true thakay abar ashbe na.
   useEffect(() => {
     if (!isLoggedIn || autoAppliedAttempted || appliedCoupon || basePrice <= 0) return;
 
@@ -458,9 +480,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Logged-in customer er profile e kono address save nai — checkout e nijer hate fill kora
-  // address ta, checkbox checked thakle, profile e o save kore deওয়া হয়। Eta best-effort:
-  // save fail korleo order placement block hoy na.
   const trySaveAddressToProfile = async () => {
     if (!isLoggedIn || savedAddresses.length > 0 || !saveAddressToProfile) return;
 
@@ -500,14 +519,11 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    // Address profile e save kora — order placement er age, best-effort (fail hole o order continue hobe)
     await trySaveAddressToProfile();
 
     try {
       const payload = {
         customerName: formData.name,
-        // ⚠️ raw 11-digit phone — User model এর phone field এর সাথে format consistent রাখা
-        // হচ্ছে, যাতে dashboard এর phone-matching ঠিকভাবে কাজ করে
         customerPhone: formData.phone,
         customerAddress: `${formData.homeAddress}, ${formData.thana}, ${formData.district}`,
         items: selectedItems.map((item) => ({
@@ -515,15 +531,13 @@ export default function CheckoutPage() {
           name: item.name,
           qty: item.quantity,
           unitPrice: item.price,
-          // Original (pre-discount) unit price — kept alongside the selling
-          // price so the admin order view can show the same "Total Price /
-          // Product Savings / Payable" breakdown as the storefront checkout.
           originalUnitPrice: item.originalPrice ?? item.price,
         })),
         deliveryCharge: deliveryCharge || 0,
         productSavings,
         discountAmount: discount,
         couponCode: appliedCoupon,
+        pointsToRedeem, // NEW
         paymentMethod: "Cash on Delivery (COD)",
       };
 
@@ -537,9 +551,6 @@ export default function CheckoutPage() {
         if (!res.ok) throw new Error(data.error || "Order placement failed");
 
         clearCart?.();
-        // Real, DB-e save hoya order ID ta query param hishebe pass kora hocche, jate
-        // order-success page fake/random ID generate na kore actual order-ta-i dekhay —
-        // nahole admin panel-e ekrokom, customer-er screen-e onnorokom ID dekha jay.
         router.push(`/order-success?orderId=${encodeURIComponent(data.orderId)}`);
     } catch (err: any) {
       setSubmitError(err.message || "Something went wrong while placing your order.");
@@ -550,8 +561,6 @@ export default function CheckoutPage() {
   const filteredDistricts = districtList.filter((d) => d.toLowerCase().includes(districtSearch.toLowerCase()));
   const filteredThanas = (locationData[formData.district] || []).filter((t) => t.toLowerCase().includes(thanaSearch.toLowerCase()));
 
-  // "Full name / phone / district / thana / home address" input form — guest checkout ebong
-  // logged-in kintu profile e address save nei emon customer, dutor jonnoi common.
   const renderAddressInputForm = () => (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -642,7 +651,6 @@ export default function CheckoutPage() {
             </div>
           ) : isLoggedIn && savedAddresses.length > 0 ? (
 
-            /* CASE 1: Logged in, profile e ekta+ address save kora ache — radio list + "+" diye notun add */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-gray-50">
                 <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -668,7 +676,6 @@ export default function CheckoutPage() {
 
           ) : isLoggedIn && savedAddresses.length === 0 ? (
 
-            /* CASE 2: Logged in, kintu profile e kono address save nai — direct fill-in form dekhano hocche */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
                 <Truck size={18} className="text-[#2c2769]" />
@@ -692,7 +699,6 @@ export default function CheckoutPage() {
 
           ) : (
 
-            /* CASE 3: Guest (not logged in) */
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
                 <Truck size={18} className="text-[#2c2769]" />
@@ -805,9 +811,38 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Price breakdown: Total Price -> Product Savings (from discounted
-                items) -> Subtotal -> Coupon Discount (kept separate) ->
-                Delivery -> Payable Amount -> Payment Method */}
+            {/* Loyalty Points redemption */}
+            {isLoggedIn && loyaltySettings.isActive && (
+              <div className="border-b border-gray-50 pb-3 mb-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <Gift size={13} className="text-[#2c2769]" /> Loyalty Points
+                  </span>
+                  <span className="text-xs font-bold text-gray-500">{loyaltyBalance} pts available</span>
+                </div>
+
+                {usableUnits > 0 ? (
+                  <label className="flex items-center justify-between gap-3 bg-[#eeedf5]/40 border border-[#2c2769]/10 rounded-xl px-3 py-2.5 cursor-pointer">
+                    <span className="text-xs font-semibold text-gray-700">
+                      Use {usableUnits * loyaltySettings.redeemPointsAmount} points — get {formatPrice(usableUnits * loyaltySettings.redeemValueAmount)} off
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={usePoints}
+                      onChange={(e) => setUsePoints(e.target.checked)}
+                      className="w-4 h-4 accent-[#2c2769] cursor-pointer shrink-0"
+                    />
+                  </label>
+                ) : (
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    {loyaltyBalance < loyaltySettings.minRedeemPoints
+                      ? `Earn at least ${loyaltySettings.minRedeemPoints} points to redeem a discount (you have ${loyaltyBalance}).`
+                      : "No points can be redeemed on this order right now."}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2 text-xs text-gray-600 mb-4">
               <div className="flex justify-between">
                 <span>Total Price</span>
@@ -830,6 +865,13 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-green-600 font-bold">
                   <span>{appliedCoupon === "NEW10" ? "New User Discount" : "Coupon Discount"}</span>
                   <span>-{formatPrice(discount)}</span>
+                </div>
+              )}
+
+              {pointsDiscountAmount > 0 && (
+                <div className="flex justify-between text-green-600 font-bold">
+                  <span>Points Discount</span>
+                  <span>-{formatPrice(pointsDiscountAmount)}</span>
                 </div>
               )}
 

@@ -4,6 +4,9 @@ import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 import PromoCode from "@/models/PromoCode";
 import Product from "@/models/Product";
+import User from "@/models/User";
+import LoyaltySettings from "@/models/LoyaltySettings";
+import LoyaltyTransaction from "@/models/LoyaltyTransaction";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,7 @@ export async function POST(req: Request) {
       deliveryCharge,
       discountAmount,
       couponCode,
+      pointsToRedeem, // NEW
     } = body;
 
     if (!customerName || !customerPhone || !customerAddress) {
@@ -31,16 +35,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Order must contain at least one product" }, { status: 400 });
     }
 
-    // Digits-only phone — matches how checkout sends it, and how the per-customer
-    // coupon usage count below queries `customerPhone`.
     const normalizedPhone = String(customerPhone).replace(/\D/g, "");
     const normalizedCouponCode = couponCode ? String(couponCode).trim().toUpperCase() : "";
+    const userId = session?.user ? (session.user as any).id : null;
 
-    // ---- Per-customer coupon usage limit enforcement (final server-side gate) ----
-    // The checkout page's "Apply Coupon" step already checks this, but that check
-    // can be bypassed (stale UI state, direct API calls, two tabs racing each other),
-    // so it's re-verified here right before the order actually gets created — this
-    // is the route the storefront checkout really hits, so this is the real gate.
     if (normalizedCouponCode) {
       const promo = await PromoCode.findOne({ codeName: normalizedCouponCode }).lean();
       if (promo?.hasUsageLimit) {
@@ -64,9 +62,43 @@ export async function POST(req: Request) {
       (sum: number, item: any) => sum + Number(item.unitPrice) * Number(item.qty),
       0
     );
+
+    // ---- Loyalty points redemption (final server-side gate) ----
+    // Only logged-in customers can redeem. Points are deducted immediately
+    // at order placement, and refunded automatically by the admin order
+    // route if the order is later Cancelled/Returned.
+    let pointsRedeemed = 0;
+    let pointsDiscountAmount = 0;
+
+    if (userId && pointsToRedeem && Number(pointsToRedeem) > 0) {
+      const requestedPoints = Math.floor(Number(pointsToRedeem));
+      const loyaltySettings = await LoyaltySettings.findOne({}).lean();
+
+      if (loyaltySettings?.isActive) {
+        const minRedeem = loyaltySettings.minRedeemPoints || 0;
+        const redeemPointsUnit = loyaltySettings.redeemPointsAmount || 0;
+        const redeemValueUnit = loyaltySettings.redeemValueAmount || 0;
+
+        if (requestedPoints >= minRedeem && redeemPointsUnit > 0) {
+          // Atomic deduction — only succeeds if the balance is actually
+          // sufficient, guarding against a stale UI or double-submit race.
+          const updatedUser = await User.findOneAndUpdate(
+            { _id: userId, loyaltyPoints: { $gte: requestedPoints } },
+            { $inc: { loyaltyPoints: -requestedPoints } },
+            { new: true }
+          );
+
+          if (updatedUser) {
+            pointsRedeemed = requestedPoints;
+            pointsDiscountAmount = Math.round((requestedPoints / redeemPointsUnit) * redeemValueUnit);
+          }
+        }
+      }
+    }
+
     const totalAmount = Math.max(
       0,
-      itemsSubtotal - (Number(discountAmount) || 0) + (Number(deliveryCharge) || 0)
+      itemsSubtotal - (Number(discountAmount) || 0) - pointsDiscountAmount + (Number(deliveryCharge) || 0)
     );
 
     const orderId = String(Math.floor(1000000 + Math.random() * 9000000));
@@ -74,8 +106,7 @@ export async function POST(req: Request) {
 
     const newOrder = await Order.create({
       orderId,
-      // লগইন করা থাকলে session থেকে userId set হবে, guest checkout হলে শুধু phone দিয়ে match হবে
-      userId: session?.user ? (session.user as any).id : null,
+      userId,
       customerName,
       customerEmail: customerEmail || "",
       customerPhone: normalizedPhone || customerPhone,
@@ -90,22 +121,27 @@ export async function POST(req: Request) {
       deliveryZone: "Inside Dhaka",
       deliveryCharge: Number(deliveryCharge) || 0,
       discountAmount: Number(discountAmount) || 0,
-      couponCode: normalizedCouponCode || null, // NEW — real field, used for usage-limit counting
+      couponCode: normalizedCouponCode || null,
       itemsSubtotal,
       totalAmount,
-      paymentStatus: "PENDING", // Cash on Delivery — ডেলিভারির পর paid হবে
+      paymentStatus: "PENDING",
       deliveryStatus: "Placed",
       statusHistory: [{ status: "Placed", changedAt: createdAt }],
       note: normalizedCouponCode ? `Coupon applied: ${normalizedCouponCode}` : "",
+      pointsRedeemed,
+      pointsDiscountAmount,
     });
 
-    // ---- Decrement stock (and bump sold count) for every purchased item ----
-    // Runs after the order is successfully created. The $gte guard prevents
-    // stock from ever going negative if two orders race for the last units —
-    // whichever request loses the race simply skips that item's decrement
-    // rather than erroring the whole order out (the order itself is already
-    // placed at this point; a stock mismatch here is stock-team's/investigation
-    // territory, not a reason to fail the customer's checkout).
+    if (pointsRedeemed > 0) {
+      await LoyaltyTransaction.create({
+        userId,
+        type: "redeemed",
+        points: pointsRedeemed,
+        orderId: newOrder._id,
+        description: `Redeemed on order #${orderId}`,
+      }).catch((err) => console.error("Failed to log points redemption:", err));
+    }
+
     await Promise.all(
       items
         .filter((item: any) => item.productId)

@@ -23,6 +23,9 @@ export interface IUser extends Document {
   addresses: IAddress[];
   wishlist: mongoose.Types.ObjectId[];
   isActive: boolean;
+  // NEW — Loyalty Points current balance. History of how it changed lives
+  // in the separate LoyaltyTransaction collection.
+  loyaltyPoints: number;
 }
 
 const AddressSchema = new Schema<IAddress>(
@@ -51,6 +54,7 @@ const UserSchema = new Schema<IUser>(
     addresses: [AddressSchema],
     wishlist: [{ type: Schema.Types.ObjectId, ref: "Product" }],
     isActive: { type: Boolean, default: true },
+    loyaltyPoints: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
