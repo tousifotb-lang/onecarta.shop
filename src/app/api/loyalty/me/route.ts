@@ -6,7 +6,8 @@ import LoyaltyTransaction from "@/models/LoyaltyTransaction";
 
 export const dynamic = "force-dynamic";
 
-// GET: Logged-in customer's current points balance + recent history.
+// GET: Logged-in customer's current points balance (completed only),
+// pending points (from orders not yet Delivered), and recent history.
 export async function GET() {
   try {
     await connectDB();
@@ -22,8 +23,13 @@ export async function GET() {
       .limit(50)
       .lean();
 
+    const pendingPoints = transactions
+      .filter((t: any) => t.type === "earned" && t.status === "pending")
+      .reduce((sum: number, t: any) => sum + t.points, 0);
+
     return NextResponse.json({
       balance: (user as any)?.loyaltyPoints || 0,
+      pendingPoints,
       transactions,
     });
   } catch (error) {
