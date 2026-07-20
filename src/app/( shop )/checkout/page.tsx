@@ -302,6 +302,15 @@ export default function CheckoutPage() {
   const pointsToRedeem = usePoints ? usableUnits * loyaltySettings.redeemPointsAmount : 0;
   const pointsDiscountAmount = usePoints ? usableUnits * loyaltySettings.redeemValueAmount : 0;
 
+  // Preview of how many points this order will earn — computed with the
+  // exact same formula the server locks in at order creation, so what the
+  // shopper sees here always matches what actually gets recorded.
+  const pointsToEarnPreview =
+    isLoggedIn && loyaltySettings.isActive && loyaltySettings.earnRateAmount > 0 && loyaltySettings.earnRatePoints > 0
+      ? Math.floor(Math.max(0, basePrice - discount - pointsDiscountAmount) / loyaltySettings.earnRateAmount) *
+        loyaltySettings.earnRatePoints
+      : 0;
+
   const grandTotal =
     deliveryCharge !== null
       ? basePrice + deliveryCharge - discount - pointsDiscountAmount
@@ -385,7 +394,7 @@ export default function CheckoutPage() {
           setCouponError(data.error || "Coupon removed — it no longer applies to your order.");
         }
       } catch {
-        // network hiccup — discount আগের মতই রেখে দেওয়া হলো
+        // network hiccup — discount will be re-validated on next change, no need to alert user
       }
     }, 400);
 
@@ -474,7 +483,7 @@ export default function CheckoutPage() {
       setIsAddressModalOpen(false);
       setNewAddressForm({ label: "Home", name: "", phone: "", district: "", thana: "", homeAddress: "" });
     } catch (err: any) {
-      alert(err.message || "Address save করতে সমস্যা হয়েছে।");
+      alert(err.message || "There was a problem saving the address, Please try again.");
     } finally {
       setIsSavingNewAddress(false);
     }
@@ -811,15 +820,22 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Loyalty Points redemption */}
+            {/* Loyalty Points — how many you'll earn on THIS order, and
+                whether you want to redeem points you already have */}
             {isLoggedIn && loyaltySettings.isActive && (
-              <div className="border-b border-gray-50 pb-3 mb-3 space-y-2">
+              <div className="border-b border-gray-50 pb-3 mb-3 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
                     <Gift size={13} className="text-[#2c2769]" /> Loyalty Points
                   </span>
                   <span className="text-xs font-bold text-gray-500">{loyaltyBalance} pts available</span>
                 </div>
+
+                {pointsToEarnPreview > 0 && (
+                  <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-3 py-2 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+                    <Gift size={12} /> You'll earn {pointsToEarnPreview} points on this order (credited after delivery)
+                  </div>
+                )}
 
                 {usableUnits > 0 ? (
                   <label className="flex items-center justify-between gap-3 bg-[#eeedf5]/40 border border-[#2c2769]/10 rounded-xl px-3 py-2.5 cursor-pointer">

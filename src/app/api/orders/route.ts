@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       deliveryCharge,
       discountAmount,
       couponCode,
-      pointsToRedeem, // NEW
+      pointsToRedeem,
     } = body;
 
     if (!customerName || !customerPhone || !customerAddress) {
@@ -63,37 +63,46 @@ export async function POST(req: Request) {
       0
     );
 
+    const loyaltySettings = await LoyaltySettings.findOne({}).lean();
+    const loyaltyIsActive = loyaltySettings?.isActive ?? true;
+    const earnRateAmount = Number(loyaltySettings?.earnRateAmount ?? 100) || 0;
+    const earnRatePoints = Number(loyaltySettings?.earnRatePoints ?? 1) || 0;
+
     // ---- Loyalty points redemption (final server-side gate) ----
-    // Only logged-in customers can redeem. Points are deducted immediately
-    // at order placement, and refunded automatically by the admin order
-    // route if the order is later Cancelled/Returned.
+    // Deducted from the balance IMMEDIATELY — this is a real, completed
+    // transaction, unlike the "earned" side below which stays pending.
     let pointsRedeemed = 0;
     let pointsDiscountAmount = 0;
 
-    if (userId && pointsToRedeem && Number(pointsToRedeem) > 0) {
+    if (userId && pointsToRedeem && Number(pointsToRedeem) > 0 && loyaltyIsActive) {
       const requestedPoints = Math.floor(Number(pointsToRedeem));
-      const loyaltySettings = await LoyaltySettings.findOne({}).lean();
+      const minRedeem = Number(loyaltySettings?.minRedeemPoints ?? 100) || 0;
+      const redeemPointsUnit = Number(loyaltySettings?.redeemPointsAmount ?? 100) || 0;
+      const redeemValueUnit = Number(loyaltySettings?.redeemValueAmount ?? 10) || 0;
 
-      if (loyaltySettings?.isActive) {
-        const minRedeem = loyaltySettings.minRedeemPoints || 0;
-        const redeemPointsUnit = loyaltySettings.redeemPointsAmount || 0;
-        const redeemValueUnit = loyaltySettings.redeemValueAmount || 0;
+      if (requestedPoints >= minRedeem && redeemPointsUnit > 0) {
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: userId, loyaltyPoints: { $gte: requestedPoints } },
+          { $inc: { loyaltyPoints: -requestedPoints } },
+          { new: true }
+        );
 
-        if (requestedPoints >= minRedeem && redeemPointsUnit > 0) {
-          // Atomic deduction — only succeeds if the balance is actually
-          // sufficient, guarding against a stale UI or double-submit race.
-          const updatedUser = await User.findOneAndUpdate(
-            { _id: userId, loyaltyPoints: { $gte: requestedPoints } },
-            { $inc: { loyaltyPoints: -requestedPoints } },
-            { new: true }
-          );
-
-          if (updatedUser) {
-            pointsRedeemed = requestedPoints;
-            pointsDiscountAmount = Math.round((requestedPoints / redeemPointsUnit) * redeemValueUnit);
-          }
+        if (updatedUser) {
+          pointsRedeemed = requestedPoints;
+          pointsDiscountAmount = Math.round((requestedPoints / redeemPointsUnit) * redeemValueUnit);
         }
       }
+    }
+
+    // ---- Loyalty points EARNED — locked in NOW (using the rate at the
+    // moment of purchase, so a later admin rate change never retroactively
+    // affects an already-placed order), but NOT yet added to the customer's
+    // balance. It sits as a "pending" transaction until the order reaches
+    // Delivered — see the admin PATCH /api/orders route for that step.
+    let pointsEarned = 0;
+    if (userId && loyaltyIsActive && earnRateAmount > 0 && earnRatePoints > 0) {
+      const basisForEarning = Math.max(0, itemsSubtotal - (Number(discountAmount) || 0) - pointsDiscountAmount);
+      pointsEarned = Math.floor(basisForEarning / earnRateAmount) * earnRatePoints;
     }
 
     const totalAmount = Math.max(
@@ -130,16 +139,30 @@ export async function POST(req: Request) {
       note: normalizedCouponCode ? `Coupon applied: ${normalizedCouponCode}` : "",
       pointsRedeemed,
       pointsDiscountAmount,
+      pointsEarned,
+      pointsEarnedCredited: false,
     });
 
     if (pointsRedeemed > 0) {
       await LoyaltyTransaction.create({
         userId,
         type: "redeemed",
+        status: "completed",
         points: pointsRedeemed,
         orderId: newOrder._id,
         description: `Redeemed on order #${orderId}`,
       }).catch((err) => console.error("Failed to log points redemption:", err));
+    }
+
+    if (pointsEarned > 0) {
+      await LoyaltyTransaction.create({
+        userId,
+        type: "earned",
+        status: "pending",
+        points: pointsEarned,
+        orderId: newOrder._id,
+        description: `Pending — order #${orderId} placed`,
+      }).catch((err) => console.error("Failed to log pending points:", err));
     }
 
     await Promise.all(

@@ -283,7 +283,7 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [slug]);
 
-  // Thumbnail switch করলে জুম স্টেট রিসেট — না হলে নতুন ছবিতে পুরনো zoom position/state আটকে থাকতে পারে
+  // Reset zoom state when switching thumbnails — otherwise, the old zoom position/state might persist on the new image.
   useEffect(() => {
     setIsZooming(false);
   }, [selectedImage]);

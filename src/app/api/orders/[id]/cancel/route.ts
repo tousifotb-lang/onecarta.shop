@@ -44,23 +44,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   order.statusHistory.push({ status: "Cancelled", changedAt });
   order.updatedAt = changedAt;
 
-  // ---- Loyalty points refund ----
-  // If this order had points redeemed at checkout, credit them back now
-  // that the order never went through. Guarded by pointsRedeemedRefunded so
-  // this never double-refunds (e.g. if an admin also touches this order).
-  if (order.userId && order.pointsRedeemed > 0 && !order.pointsRedeemedRefunded) {
-    await User.updateOne(
-      { _id: order.userId },
-      { $inc: { loyaltyPoints: order.pointsRedeemed } }
-    );
-    await LoyaltyTransaction.create({
-      userId: order.userId,
-      type: "refunded",
-      points: order.pointsRedeemed,
-      orderId: order._id,
-      description: `Refunded — order #${order.orderId} was cancelled`,
-    });
-    order.pointsRedeemedRefunded = true;
+  // ---- Loyalty points: refund any REDEEMED points, VOID any PENDING earn ----
+  if (order.userId) {
+    if (order.pointsRedeemed > 0 && !order.pointsRedeemedRefunded) {
+      await User.updateOne(
+        { _id: order.userId },
+        { $inc: { loyaltyPoints: order.pointsRedeemed } }
+      );
+      await LoyaltyTransaction.create({
+        userId: order.userId,
+        type: "refunded",
+        status: "completed",
+        points: order.pointsRedeemed,
+        orderId: order._id,
+        description: `Refunded — order #${order.orderId} was cancelled`,
+      });
+      order.pointsRedeemedRefunded = true;
+    }
+
+    if (!order.pointsEarnedCredited) {
+      order.pointsEarnedCredited = true; // stop future crediting for this order
+      await LoyaltyTransaction.updateMany(
+        { orderId: order._id, type: "earned", status: "pending" },
+        { $set: { status: "voided", description: `Voided — order #${order.orderId} was cancelled` } }
+      );
+    }
   }
 
   await order.save();

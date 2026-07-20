@@ -6,7 +6,7 @@ export default function BootstrapAdminDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [mounted, setMounted] = useState(false);
 
-  // --- কুপন, ল্যান্ডিং ও প্রোডাক্ট ডেটা নোড (প্রাইস ইংলিশ ফরম্যাটে ফিক্সড) ---
+  // --- Coupon, Landing, and Product Data Nodes (Price fixed to English format) ---
   const [coupons, setCoupons] = useState([
     { id: "c1", code: "ONECARTA40", discount: "৳40", type: "Fixed", status: "Active", used: 12 },
     { id: "c2", code: "SUMMERSALE", discount: "15%", type: "Percentage", status: "Active", used: 5 }
@@ -51,7 +51,7 @@ export default function BootstrapAdminDashboard() {
     <div className="container-fluid g-0 position-fixed top-0 start-0 w-100 h-100 overflow-y-auto bg-light" style={{ zIndex: 999999 }}>
       <div className="row g-0 min-vh-100">
         
-        {/* 🧭 বাম পাশের বুটস্ট্র্যাপ ডার্ক সাইডবার */}
+        {/* Left-side Bootstrap dark sidebar */}
         <div className="col-12 col-md-3 col-xl-2 bg-dark text-white p-4 d-flex flex-column">
           <div className="d-flex align-items-center pb-3 mb-4 border-bottom border-secondary">
             <i className="bi bi-speedometer2 text-warning fs-4 me-2"></i>
@@ -85,7 +85,7 @@ export default function BootstrapAdminDashboard() {
           </div>
         </div>
 
-        {/* 📊 ডান পাশের মেইন ডাটা প্যানেল উইন্ডো */}
+        {/* Main data panel window on the right*/}
         <div className="col-12 col-md-9 col-xl-10 p-4 p-md-5">
           
           {/* ================= MOD A: DASHBOARD OVERVIEW ================= */}

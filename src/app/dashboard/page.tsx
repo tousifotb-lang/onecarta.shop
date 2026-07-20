@@ -60,6 +60,7 @@ interface WishlistProduct {
 interface LoyaltyTransaction {
   _id: string;
   type: "earned" | "redeemed" | "refunded";
+  status?: "pending" | "completed" | "voided";
   points: number;
   description: string;
   createdAt: string;
@@ -164,6 +165,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [wishlist, setWishlist] = useState<WishlistProduct[]>([]);
   const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [loyaltyPendingPoints, setLoyaltyPendingPoints] = useState(0);
   const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState("");
@@ -232,6 +234,7 @@ export default function DashboardPage() {
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setWishlist(Array.isArray(wishlistData) ? wishlistData : []);
       setLoyaltyBalance(loyaltyData.balance || 0);
+      setLoyaltyPendingPoints(loyaltyData.pendingPoints || 0);
       setLoyaltyTransactions(Array.isArray(loyaltyData.transactions) ? loyaltyData.transactions : []);
 
       setSettingsName(meData.name || "");
@@ -520,7 +523,12 @@ export default function DashboardPage() {
             </div>
             <div className="bg-amber-50/70 border border-amber-100 rounded-xl px-5 py-3 text-center flex-1 md:flex-none">
               <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Points</p>
-              <p className="text-xl font-black text-amber-600 mt-0.5">{loyaltyBalance}</p>
+              <p className="text-xl font-black text-amber-600 mt-0.5">
+                {loyaltyBalance}
+                {loyaltyPendingPoints > 0 && (
+                  <span className="text-xs font-bold text-amber-400"> (+{loyaltyPendingPoints} pending)</span>
+                )}
+              </p>
             </div>
           </div>
         </div>
@@ -793,7 +801,14 @@ export default function DashboardPage() {
                 <div className="bg-gradient-to-br from-[#1f4294] to-[#16337a] rounded-2xl p-6 text-white flex items-center justify-between">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-wider text-white/70">Current Balance</p>
-                    <p className="text-3xl font-black mt-1">{loyaltyBalance} <span className="text-base font-bold text-white/70">points</span></p>
+                    <p className="text-3xl font-black mt-1">
+                      {loyaltyBalance} <span className="text-base font-bold text-white/70">points</span>
+                    </p>
+                    {loyaltyPendingPoints > 0 && (
+                      <p className="text-xs font-bold text-white/70 mt-1">
+                        (+{loyaltyPendingPoints} pending — credited once your order is delivered)
+                      </p>
+                    )}
                   </div>
                   <Gift size={40} className="text-white/30" />
                 </div>
@@ -806,19 +821,51 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {loyaltyTransactions.map((tx) => (
-                        <div key={tx._id} className="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3">
-                          <div>
-                            <p className="text-xs font-bold text-gray-800">{tx.description}</p>
-                            <p className="text-[10px] text-gray-400 font-medium mt-0.5">
-                              {new Date(tx.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
-                            </p>
+                      {loyaltyTransactions.map((tx) => {
+                        const isPending = tx.status === "pending";
+                        const isVoided = tx.status === "voided";
+                        return (
+                          <div
+                            key={tx._id}
+                            className={`flex items-center justify-between border rounded-xl px-4 py-3 ${
+                              isVoided ? "border-gray-100 bg-gray-50/50 opacity-60" : "border-gray-100"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-bold text-gray-800">{tx.description}</p>
+                                {isPending && (
+                                  <span className="text-[9px] font-black uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md">
+                                    Pending
+                                  </span>
+                                )}
+                                {isVoided && (
+                                  <span className="text-[9px] font-black uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-md">
+                                    Voided
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                {new Date(tx.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
+                              </p>
+                            </div>
+                            <span
+                              className={`text-sm font-black ${
+                                isVoided
+                                  ? "text-gray-400 line-through"
+                                  : isPending
+                                  ? "text-amber-500"
+                                  : tx.type === "redeemed"
+                                  ? "text-red-500"
+                                  : "text-emerald-600"
+                              }`}
+                            >
+                              {tx.type === "redeemed" ? "-" : "+"}
+                              {tx.points} pts
+                            </span>
                           </div>
-                          <span className={`text-sm font-black ${tx.type === "redeemed" ? "text-red-500" : "text-emerald-600"}`}>
-                            {tx.type === "redeemed" ? "-" : "+"}{tx.points} pts
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

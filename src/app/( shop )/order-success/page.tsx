@@ -11,9 +11,9 @@ function OrderSuccessContent() {
   const { clearCart } = useCartStore();
   const [currentDate, setCurrentDate] = useState("");
 
-  // Checkout page order create howar por real, DB-e save hoya orderId ta
-  // query param diye pass kore — admin panel-e jei ID dekha jay, customer-er
-  // screen-eo thik shei ID-i dekhabe.
+  // After the checkout page order is created, the order is saved in the DB and read.
+  // Passed via query parameter — the ID visible in the admin panel.
+  // The screen will also show that very Eid.
   const orderId = searchParams.get("orderId");
 
   useEffect(() => {
@@ -27,8 +27,8 @@ function OrderSuccessContent() {
     setCurrentDate(date);
   }, [clearCart]);
 
-  // Keu jodi direct URL-e /order-success e chole ashe (orderId chara), tahole
-  // fake ID banano hobe na — বরং redirect kore dewa hobe home-e.
+  // If someone navigates directly to the /order-success URL (without an order ID), then
+  // Fake IDs won't be created—instead, the user will be redirected to the home page.
   useEffect(() => {
     if (!orderId) {
       const timer = setTimeout(() => router.push("/"), 100);
