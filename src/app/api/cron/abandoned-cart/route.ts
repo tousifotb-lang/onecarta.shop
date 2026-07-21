@@ -4,7 +4,7 @@ import AbandonedCart from "@/models/AbandonedCart";
 import { sendAbandonedCartEmail } from "@/lib/email";
 import { sendAbandonedCartSMS } from "@/lib/sms";
 
-const STAGE_DELAY_HOURS = [1, 24, 72]; // stage 1: 1hr, stage 2: 24hr, stage 3: 72hr
+const STAGE_DELAY_HOURS = [0, 0, 0]; // TEMP: testing only
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
