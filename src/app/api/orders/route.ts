@@ -7,6 +7,8 @@ import Product from "@/models/Product";
 import User from "@/models/User";
 import LoyaltySettings from "@/models/LoyaltySettings";
 import LoyaltyTransaction from "@/models/LoyaltyTransaction";
+import AbandonedCart from "@/models/AbandonedCart";
+import { normalizeBDPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -193,6 +195,23 @@ export async function POST(req: Request) {
           })
         )
     );
+
+    // Mark matching abandoned cart as converted — best-effort, order flow
+    // ke block korবে না jodi eiটা fail-ও kore.
+    try {
+      const identifiers: string[] = [];
+      if (customerEmail) identifiers.push(String(customerEmail).trim().toLowerCase());
+      if (normalizedPhone) identifiers.push(normalizeBDPhone(normalizedPhone));
+
+      if (identifiers.length > 0) {
+        await AbandonedCart.updateMany(
+          { identifier: { $in: identifiers }, status: { $ne: "converted" } },
+          { $set: { status: "converted" } }
+        );
+      }
+    } catch (err) {
+      console.error("Failed to mark abandoned cart as converted:", err);
+    }
 
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error: any) {

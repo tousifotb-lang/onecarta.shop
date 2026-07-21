@@ -97,7 +97,7 @@ const districtList = Object.keys(locationData).sort();
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const { openModal } = useAuthModalStore();
 
   const { getCartItems, updateQuantity, clearCart } = useCartStore();
@@ -170,6 +170,43 @@ export default function CheckoutPage() {
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
   const reapplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cartSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+
+    const userEmail = session?.user?.email || null;
+    const hasEnoughContact = !!userEmail || formData.phone.length >= 10;
+    if (!hasEnoughContact) return;
+
+    if (cartSyncTimerRef.current) clearTimeout(cartSyncTimerRef.current);
+    cartSyncTimerRef.current = setTimeout(() => {
+      fetch("/api/cart/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userEmail,
+          phone: formData.phone,
+          name: formData.name,
+          items: items.map((item) => ({
+            productId: item._id,
+            name: item.name,
+            slug: item.slug,
+            image: item.image,
+            price: item.price,
+            originalPrice: item.originalPrice,
+            quantity: item.quantity,
+          })),
+          totalAmount: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+        }),
+      }).catch(() => {});
+    }, 1500);
+
+    return () => {
+      if (cartSyncTimerRef.current) clearTimeout(cartSyncTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, formData.phone, formData.name, session]);
 
   useEffect(() => {
     fetch("/api/settings/delivery")
