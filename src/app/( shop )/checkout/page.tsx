@@ -20,6 +20,12 @@ interface SavedAddress {
   isDefault: boolean;
 }
 
+// Integer-cent math helpers — every point/money calculation on this page
+// uses these instead of raw float arithmetic, so decimal prices (e.g.
+// ৳151.50) never produce the classic JS floating-point rounding bug.
+const toCents = (amount: number) => Math.round(amount * 100);
+const fromCents = (cents: number) => cents / 100;
+
 const locationData: Record<string, string[]> = {
   "Norshingdi": ["Sadar", "Monorhordi", "Shibpur", "Palash", "Belab", "Raipura"],
   "Narayangonj": ["Sadar", "Bandor", "Sonargaon", "Arai Hazar", "Rupgonj"],
@@ -147,10 +153,9 @@ export default function CheckoutPage() {
 
   const [deliveryRates, setDeliveryRates] = useState({ insideDhaka: 80, specialZone: 100, outsideDhaka: 120 });
 
-  // Loyalty Points — admin-controlled rates + this customer's live balance.
-  // Redemption discount is computed live from balance/rates on every render,
-  // so it always tracks the current cart total automatically without needing
-  // a separate re-validate effect like the coupon does.
+  // Loyalty Points — admin-controlled rates, this customer's live balance,
+  // and a free-text "how many points do you want to use" input (replaces
+  // the old all-or-nothing checkbox).
   const [loyaltyBalance, setLoyaltyBalance] = useState(0);
   const [loyaltySettings, setLoyaltySettings] = useState({
     isActive: false,
@@ -160,7 +165,7 @@ export default function CheckoutPage() {
     redeemValueAmount: 10,
     minRedeemPoints: 100,
   });
-  const [usePoints, setUsePoints] = useState(false);
+  const [customPointsInput, setCustomPointsInput] = useState("");
 
   const districtRef = useRef<HTMLDivElement>(null);
   const thanaRef = useRef<HTMLDivElement>(null);
@@ -290,31 +295,50 @@ export default function CheckoutPage() {
 
   const deliveryCharge = getDeliveryCharge();
 
-  // Loyalty points redemption — capped both by the customer's balance AND by
-  // the order's own subtotal (after coupon discount), so points can never
-  // discount an order below zero or beyond what's being paid for products.
-  const maxPointsDiscountAllowed = Math.max(0, basePrice - discount);
-  const redeemableUnitsFromBalance =
-    loyaltySettings.redeemPointsAmount > 0 ? Math.floor(loyaltyBalance / loyaltySettings.redeemPointsAmount) : 0;
-  const redeemableUnitsFromCap =
-    loyaltySettings.redeemValueAmount > 0 ? Math.floor(maxPointsDiscountAllowed / loyaltySettings.redeemValueAmount) : 0;
-  const usableUnits = Math.max(0, Math.min(redeemableUnitsFromBalance, redeemableUnitsFromCap));
-  const pointsToRedeem = usePoints ? usableUnits * loyaltySettings.redeemPointsAmount : 0;
-  const pointsDiscountAmount = usePoints ? usableUnits * loyaltySettings.redeemValueAmount : 0;
+  // ── Loyalty points: cent-safe custom redemption ──────────────────────────
+  const valuePerPointCents =
+    loyaltySettings.redeemPointsAmount > 0
+      ? (loyaltySettings.redeemValueAmount * 100) / loyaltySettings.redeemPointsAmount
+      : 0;
 
-  // Preview of how many points this order will earn — computed with the
-  // exact same formula the server locks in at order creation, so what the
-  // shopper sees here always matches what actually gets recorded.
-  const pointsToEarnPreview =
-    isLoggedIn && loyaltySettings.isActive && loyaltySettings.earnRateAmount > 0 && loyaltySettings.earnRatePoints > 0
-      ? Math.floor(Math.max(0, basePrice - discount - pointsDiscountAmount) / loyaltySettings.earnRateAmount) *
-        loyaltySettings.earnRatePoints
+  const maxPointsDiscountAllowedCents = Math.max(0, toCents(basePrice) - toCents(discount));
+  const maxPointsFromCap =
+    valuePerPointCents > 0 ? Math.floor(maxPointsDiscountAllowedCents / valuePerPointCents) : 0;
+  const maxRedeemablePoints = Math.max(0, Math.min(loyaltyBalance, maxPointsFromCap));
+
+  const rawCustomPoints = Math.max(0, Math.min(parseInt(customPointsInput) || 0, maxRedeemablePoints));
+  const meetsMinimum = rawCustomPoints === 0 || rawCustomPoints >= loyaltySettings.minRedeemPoints;
+  const pointsToRedeem = meetsMinimum ? rawCustomPoints : 0;
+  const pointsDiscountAmount = fromCents(Math.round(pointsToRedeem * valuePerPointCents));
+
+  // "Round off" quick option — figures out exactly how many points are
+  // needed to cover just the decimal (paisa) remainder of the total, so the
+  // final payable amount comes out to a clean whole number.
+  const totalBeforePointsCents =
+    deliveryCharge !== null
+      ? toCents(basePrice) - toCents(discount) + toCents(deliveryCharge)
+      : toCents(basePrice) - toCents(discount);
+  const decimalRemainderCents = ((totalBeforePointsCents % 100) + 100) % 100;
+  const roundOffPointsNeeded =
+    valuePerPointCents > 0 && decimalRemainderCents > 0
+      ? Math.min(maxRedeemablePoints, Math.ceil(decimalRemainderCents / valuePerPointCents))
       : 0;
 
   const grandTotal =
     deliveryCharge !== null
       ? basePrice + deliveryCharge - discount - pointsDiscountAmount
       : basePrice - discount - pointsDiscountAmount;
+
+  // Preview of how many points this order will earn — mirrors the exact
+  // formula the server locks in at order creation.
+  const pointsToEarnPreview = (() => {
+    if (!isLoggedIn || !loyaltySettings.isActive || loyaltySettings.earnRateAmount <= 0 || loyaltySettings.earnRatePoints <= 0) {
+      return 0;
+    }
+    const basisCents = Math.max(0, toCents(basePrice) - toCents(discount) - toCents(pointsDiscountAmount));
+    const basis = fromCents(basisCents);
+    return Math.floor(basis / loyaltySettings.earnRateAmount) * loyaltySettings.earnRatePoints;
+  })();
 
   const validateCoupon = async (
     code: string,
@@ -394,7 +418,7 @@ export default function CheckoutPage() {
           setCouponError(data.error || "Coupon removed — it no longer applies to your order.");
         }
       } catch {
-        // network hiccup — discount will be re-validated on next change, no need to alert user
+        // network hiccup — discount আগের মতই রেখে দেওয়া হলো
       }
     }, 400);
 
@@ -483,7 +507,7 @@ export default function CheckoutPage() {
       setIsAddressModalOpen(false);
       setNewAddressForm({ label: "Home", name: "", phone: "", district: "", thana: "", homeAddress: "" });
     } catch (err: any) {
-      alert(err.message || "There was a problem saving the address, Please try again.");
+      alert(err.message || "Address save করতে সমস্যা হয়েছে।");
     } finally {
       setIsSavingNewAddress(false);
     }
@@ -546,7 +570,7 @@ export default function CheckoutPage() {
         productSavings,
         discountAmount: discount,
         couponCode: appliedCoupon,
-        pointsToRedeem, // NEW
+        pointsToRedeem,
         paymentMethod: "Cash on Delivery (COD)",
       };
 
@@ -820,8 +844,7 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Loyalty Points — how many you'll earn on THIS order, and
-                whether you want to redeem points you already have */}
+            {/* Loyalty Points — custom amount entry + round-off quick option */}
             {isLoggedIn && loyaltySettings.isActive && (
               <div className="border-b border-gray-50 pb-3 mb-3 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -837,18 +860,58 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {usableUnits > 0 ? (
-                  <label className="flex items-center justify-between gap-3 bg-[#eeedf5]/40 border border-[#2c2769]/10 rounded-xl px-3 py-2.5 cursor-pointer">
-                    <span className="text-xs font-semibold text-gray-700">
-                      Use {usableUnits * loyaltySettings.redeemPointsAmount} points — get {formatPrice(usableUnits * loyaltySettings.redeemValueAmount)} off
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={usePoints}
-                      onChange={(e) => setUsePoints(e.target.checked)}
-                      className="w-4 h-4 accent-[#2c2769] cursor-pointer shrink-0"
-                    />
-                  </label>
+                {maxRedeemablePoints > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={maxRedeemablePoints}
+                        value={customPointsInput}
+                        onChange={(e) => setCustomPointsInput(e.target.value)}
+                        placeholder="Enter points to use"
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-[#2c2769] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustomPointsInput(String(maxRedeemablePoints))}
+                        className="text-[11px] font-bold text-[#2c2769] bg-[#eeedf5] hover:bg-[#e0ddf2] px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0"
+                      >
+                        Use Max
+                      </button>
+                    </div>
+
+                    {roundOffPointsNeeded > 0 && customPointsInput !== String(roundOffPointsNeeded) && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomPointsInput(String(roundOffPointsNeeded))}
+                        className="w-full text-left text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Round off ৳{fromCents(decimalRemainderCents).toFixed(2)} using {roundOffPointsNeeded} points
+                      </button>
+                    )}
+
+                    {rawCustomPoints > 0 && !meetsMinimum && (
+                      <p className="text-[11px] text-red-500 font-semibold px-1">
+                        Minimum {loyaltySettings.minRedeemPoints} points required to redeem.
+                      </p>
+                    )}
+
+                    {pointsToRedeem > 0 && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-emerald-600 font-bold px-1">
+                          Using {pointsToRedeem} points → {formatPrice(pointsDiscountAmount)} discount
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setCustomPointsInput("")}
+                          className="text-[10px] text-gray-400 hover:text-red-500 font-semibold underline shrink-0"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-[11px] text-gray-400 font-medium">
                     {loyaltyBalance < loyaltySettings.minRedeemPoints

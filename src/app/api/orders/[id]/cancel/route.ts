@@ -44,8 +44,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   order.statusHistory.push({ status: "Cancelled", changedAt });
   order.updatedAt = changedAt;
 
-  // ---- Loyalty points: refund any REDEEMED points, VOID any PENDING earn ----
   if (order.userId) {
+    // Refund any redeemed points
     if (order.pointsRedeemed > 0 && !order.pointsRedeemedRefunded) {
       await User.updateOne(
         { _id: order.userId },
@@ -62,12 +62,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       order.pointsRedeemedRefunded = true;
     }
 
-    if (!order.pointsEarnedCredited) {
-      order.pointsEarnedCredited = true; // stop future crediting for this order
+    // Defensive: if this order had somehow already been credited (unusual,
+    // since Delivered orders can't reach this route at all), reverse it
+    // instead of leaving phantom points in the balance.
+    if (order.pointsEarnedCredited && (order.pointsEarned || 0) > 0) {
+      const userDoc = await User.findById(order.userId).select("loyaltyPoints").lean();
+      const currentBalance = (userDoc as any)?.loyaltyPoints || 0;
+      const newBalance = Math.max(0, currentBalance - order.pointsEarned);
+      await User.updateOne({ _id: order.userId }, { $set: { loyaltyPoints: newBalance } });
+      await LoyaltyTransaction.updateMany(
+        { orderId: order._id, type: "earned", status: "completed" },
+        { $set: { status: "reversed", description: `Reversed — order #${order.orderId} was cancelled` } }
+      );
+      order.pointsEarnedCredited = false;
+    } else if (!order.pointsEarnedCredited) {
+      // Still-pending earned points for this order — void them.
       await LoyaltyTransaction.updateMany(
         { orderId: order._id, type: "earned", status: "pending" },
         { $set: { status: "voided", description: `Voided — order #${order.orderId} was cancelled` } }
       );
+      order.pointsEarnedCredited = true; // prevents future crediting
     }
   }
 

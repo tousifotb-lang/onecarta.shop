@@ -10,6 +10,12 @@ import LoyaltyTransaction from "@/models/LoyaltyTransaction";
 
 export const dynamic = "force-dynamic";
 
+// Integer-cent math helpers — avoids classic floating-point bugs
+// (0.1 + 0.2 !== 0.3) that break point-redemption calculations whenever a
+// price has decimal paisa (e.g. 151.50 taka).
+const toCents = (amount: number) => Math.round(amount * 100);
+const fromCents = (cents: number) => cents / 100;
+
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -67,42 +73,52 @@ export async function POST(req: Request) {
     const loyaltyIsActive = loyaltySettings?.isActive ?? true;
     const earnRateAmount = Number(loyaltySettings?.earnRateAmount ?? 100) || 0;
     const earnRatePoints = Number(loyaltySettings?.earnRatePoints ?? 1) || 0;
+    const redeemPointsUnit = Number(loyaltySettings?.redeemPointsAmount ?? 100) || 0;
+    const redeemValueUnit = Number(loyaltySettings?.redeemValueAmount ?? 10) || 0;
+    const minRedeem = Number(loyaltySettings?.minRedeemPoints ?? 100) || 0;
+
+    // Cents-per-point — every point-related money calc below uses this,
+    // never raw float division, so decimal prices never break the math.
+    const valuePerPointCents = redeemPointsUnit > 0 ? (redeemValueUnit * 100) / redeemPointsUnit : 0;
 
     // ---- Loyalty points redemption (final server-side gate) ----
-    // Deducted from the balance IMMEDIATELY — this is a real, completed
-    // transaction, unlike the "earned" side below which stays pending.
     let pointsRedeemed = 0;
     let pointsDiscountAmount = 0;
 
-    if (userId && pointsToRedeem && Number(pointsToRedeem) > 0 && loyaltyIsActive) {
-      const requestedPoints = Math.floor(Number(pointsToRedeem));
-      const minRedeem = Number(loyaltySettings?.minRedeemPoints ?? 100) || 0;
-      const redeemPointsUnit = Number(loyaltySettings?.redeemPointsAmount ?? 100) || 0;
-      const redeemValueUnit = Number(loyaltySettings?.redeemValueAmount ?? 10) || 0;
+    if (userId && pointsToRedeem && Number(pointsToRedeem) > 0 && loyaltyIsActive && valuePerPointCents > 0) {
+      let requestedPoints = Math.floor(Number(pointsToRedeem));
 
-      if (requestedPoints >= minRedeem && redeemPointsUnit > 0) {
-        const updatedUser = await User.findOneAndUpdate(
-          { _id: userId, loyaltyPoints: { $gte: requestedPoints } },
-          { $inc: { loyaltyPoints: -requestedPoints } },
-          { new: true }
-        );
+      if (requestedPoints >= minRedeem) {
+        // Cap by the remaining payable amount — points can never discount
+        // an order below zero, regardless of what the client sent.
+        const maxDiscountAllowedCents = Math.max(0, toCents(itemsSubtotal) - toCents(Number(discountAmount) || 0));
+        const maxPointsAllowedByCap = Math.floor(maxDiscountAllowedCents / valuePerPointCents);
+        requestedPoints = Math.min(requestedPoints, maxPointsAllowedByCap);
 
-        if (updatedUser) {
-          pointsRedeemed = requestedPoints;
-          pointsDiscountAmount = Math.round((requestedPoints / redeemPointsUnit) * redeemValueUnit);
+        if (requestedPoints > 0) {
+          const updatedUser = await User.findOneAndUpdate(
+            { _id: userId, loyaltyPoints: { $gte: requestedPoints } },
+            { $inc: { loyaltyPoints: -requestedPoints } },
+            { new: true }
+          );
+
+          if (updatedUser) {
+            pointsRedeemed = requestedPoints;
+            pointsDiscountAmount = fromCents(Math.round(requestedPoints * valuePerPointCents));
+          }
         }
       }
     }
 
-    // ---- Loyalty points EARNED — locked in NOW (using the rate at the
-    // moment of purchase, so a later admin rate change never retroactively
-    // affects an already-placed order), but NOT yet added to the customer's
-    // balance. It sits as a "pending" transaction until the order reaches
-    // Delivered — see the admin PATCH /api/orders route for that step.
+    // ---- Loyalty points EARNED — locked in now, credited on Delivered ----
     let pointsEarned = 0;
     if (userId && loyaltyIsActive && earnRateAmount > 0 && earnRatePoints > 0) {
-      const basisForEarning = Math.max(0, itemsSubtotal - (Number(discountAmount) || 0) - pointsDiscountAmount);
-      pointsEarned = Math.floor(basisForEarning / earnRateAmount) * earnRatePoints;
+      const basisCents = Math.max(
+        0,
+        toCents(itemsSubtotal) - toCents(Number(discountAmount) || 0) - toCents(pointsDiscountAmount)
+      );
+      const basis = fromCents(basisCents);
+      pointsEarned = Math.floor(basis / earnRateAmount) * earnRatePoints;
     }
 
     const totalAmount = Math.max(
