@@ -128,7 +128,7 @@ export default function Footer() {
                   className="flex-shrink-0"
                   style={{ color: "#a8a6d9" }}
                 />
-                <span>+8809611576269 (10am - 10pm)</span>
+                <span>+8801303223513 (10am - 10pm)</span>
               </li>
 
               <li className="flex items-center gap-2">
