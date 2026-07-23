@@ -12,7 +12,7 @@ export async function sendAbandonedCartSMS({
   recoveryLink: string;
 }) {
   const phone = normalizeBDPhone(to);
-  const message = `Hi ${name || ""}, apnar cart e item ache (Total: ৳${totalAmount.toFixed(0)}). Order complete korte: ${recoveryLink}`;
+  const message = `Hi ${name || "there"}, your Onecarta cart awaits!\nUse code FREESHIP for Free Delivery.\nOrder now: ${recoveryLink}\nThank you for choosing Onecarta.`;
 
   const url = new URL(process.env.SMS_ENDPOINT || "https://bulksmsbd.net/api/smsapi");
   url.searchParams.set("api_key", process.env.SMS_API_KEY || "");
@@ -24,7 +24,6 @@ export async function sendAbandonedCartSMS({
   const res = await fetch(url.toString());
   const data = await res.text();
 
-  // BulkSMSBD returns a plain response code (e.g. "202"), not JSON like Alpha SMS did.
   if (!data.trim().startsWith("202")) {
     console.error("SMS send failed:", data);
   }

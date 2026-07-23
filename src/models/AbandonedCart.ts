@@ -1,6 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 import crypto from "crypto";
 
+function generateShortCode(length = 6): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.randomBytes(length);
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return result;
+}
+
 export interface IAbandonedCartItem {
   productId: string;
   name: string;
@@ -58,7 +68,7 @@ const AbandonedCartSchema = new Schema<IAbandonedCart>(
       type: String,
       required: true,
       unique: true,
-      default: () => crypto.randomBytes(24).toString("hex"),
+      default: () => generateShortCode(6),
     },
   },
   { timestamps: true }

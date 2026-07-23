@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     if (hoursSinceUpdate < delayHours) continue;
 
-    const recoveryLink = `${process.env.NEXT_PUBLIC_SITE_URL}/cart/recover/${cart.recoveryToken}`;
+    const recoveryLink = `${process.env.NEXT_PUBLIC_SITE_URL}/r/${cart.recoveryToken}`;
 
     try {
       if (cart.email) {
