@@ -115,6 +115,7 @@ export default function CheckoutPage() {
 
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     phone: "",
     district: "",
     thana: "",
@@ -173,9 +174,16 @@ export default function CheckoutPage() {
   const cartSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (session?.user?.email && !formData.email) {
+      setFormData((prev) => ({ ...prev, email: session.user!.email! }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  useEffect(() => {
     if (items.length === 0) return;
 
-    const userEmail = session?.user?.email || null;
+    const userEmail = session?.user?.email || formData.email || null;
     const hasEnoughContact = !!userEmail || formData.phone.length >= 10;
     if (!hasEnoughContact) return;
 
@@ -206,7 +214,7 @@ export default function CheckoutPage() {
       if (cartSyncTimerRef.current) clearTimeout(cartSyncTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, formData.phone, formData.name, session]);
+  }, [items, formData.phone, formData.name, formData.email, session]);
 
   useEffect(() => {
     fetch("/api/settings/delivery")
@@ -242,13 +250,14 @@ export default function CheckoutPage() {
       const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
       if (defaultAddr) {
         setSelectedPresentAddress(defaultAddr._id);
-        setFormData({
+        setFormData((prev) => ({
+          ...prev,
           name: defaultAddr.name,
           phone: defaultAddr.phone,
           district: defaultAddr.district,
           thana: defaultAddr.thana,
           homeAddress: defaultAddr.homeAddress,
-        });
+        }));
       } else if (data.name || data.phone) {
         setFormData((prev) => ({ ...prev, name: data.name || "", phone: data.phone || "" }));
       }
@@ -290,13 +299,14 @@ export default function CheckoutPage() {
     setSelectedPresentAddress(addrId);
     const activeAddr = savedAddresses.find((a) => a._id === addrId);
     if (activeAddr) {
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         name: activeAddr.name,
         phone: activeAddr.phone,
         district: activeAddr.district,
         thana: activeAddr.thana,
         homeAddress: activeAddr.homeAddress,
-      });
+      }));
     }
   };
 
@@ -532,13 +542,14 @@ export default function CheckoutPage() {
       const justAdded = data[data.length - 1];
       if (justAdded) {
         setSelectedPresentAddress(justAdded._id);
-        setFormData({
+        setFormData((prev) => ({
+          ...prev,
           name: justAdded.name,
           phone: justAdded.phone,
           district: justAdded.district,
           thana: justAdded.thana,
           homeAddress: justAdded.homeAddress,
-        });
+        }));
       }
 
       setIsAddressModalOpen(false);
@@ -594,6 +605,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         customerName: formData.name,
+        customerEmail: formData.email,
         customerPhone: formData.phone,
         customerAddress: `${formData.homeAddress}, ${formData.thana}, ${formData.district}`,
         items: selectedItems.map((item) => ({
@@ -646,6 +658,11 @@ export default function CheckoutPage() {
             <input type="tel" required placeholder="01XXXXXXXXX" className="w-full p-3 text-sm focus:outline-none bg-transparent" value={formData.phone} onChange={(e) => handleFieldChange("phone", e.target.value.replace(/\D/g, ""))} />
           </div>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-gray-600 uppercase">Email (Optional)</label>
+        <input type="email" placeholder="you@example.com" className="w-full p-3 border border-gray-200 focus:border-[#2c2769] rounded-xl text-sm focus:outline-none" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

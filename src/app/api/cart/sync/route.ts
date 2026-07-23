@@ -22,10 +22,16 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const existing = await AbandonedCart.findOne({
-      identifier,
-      status: { $in: ["active", "abandoned"] },
-    });
+    const orConditions: any[] = [];
+      if (normalizedPhone) orConditions.push({ phone: normalizedPhone });
+      if (normalizedEmail) orConditions.push({ email: normalizedEmail });
+
+      const existing = orConditions.length > 0
+        ? await AbandonedCart.findOne({
+            $or: orConditions,
+            status: { $in: ["active", "abandoned"] },
+          })
+        : null;
 
     if (existing) {
       existing.email = normalizedEmail || existing.email;
