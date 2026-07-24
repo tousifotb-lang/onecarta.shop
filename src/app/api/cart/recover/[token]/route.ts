@@ -3,10 +3,11 @@ import connectDB from "@/lib/mongodb";
 import AbandonedCart, { IAbandonedCartItem } from "@/models/AbandonedCart";
 import Product from "@/models/Product";
 
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
+    const { token } = await params;
     await connectDB();
-    const cart = await AbandonedCart.findOne({ recoveryToken: params.token });
+    const cart = await AbandonedCart.findOne({ recoveryToken: token });
     if (!cart) return NextResponse.json({ error: "not found" }, { status: 404 });
 
     const products = await Product.find({
