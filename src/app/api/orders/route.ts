@@ -199,13 +199,13 @@ export async function POST(req: Request) {
     // Mark matching abandoned cart as converted — best-effort, order flow
     // ke block korবে না jodi eiটা fail-ও kore.
     try {
-      const identifiers: string[] = [];
-      if (customerEmail) identifiers.push(String(customerEmail).trim().toLowerCase());
-      if (normalizedPhone) identifiers.push(normalizeBDPhone(normalizedPhone));
+      const orConditions: any[] = [];
+      if (customerEmail) orConditions.push({ email: String(customerEmail).trim().toLowerCase() });
+      if (normalizedPhone) orConditions.push({ phone: normalizeBDPhone(normalizedPhone) });
 
-      if (identifiers.length > 0) {
+      if (orConditions.length > 0) {
         await AbandonedCart.updateMany(
-          { identifier: { $in: identifiers }, status: { $ne: "converted" } },
+          { $or: orConditions, status: { $ne: "converted" } },
           { $set: { status: "converted" } }
         );
       }

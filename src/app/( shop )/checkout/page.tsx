@@ -26,6 +26,18 @@ interface SavedAddress {
 const toCents = (amount: number) => Math.round(amount * 100);
 const fromCents = (cents: number) => cents / 100;
 
+function getCartSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem("onecarta_cart_session_id");
+  if (!id) {
+    id = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem("onecarta_cart_session_id", id);
+  }
+  return id;
+}
+
 const locationData: Record<string, string[]> = {
   "Norshingdi": ["Sadar", "Monorhordi", "Shibpur", "Palash", "Belab", "Raipura"],
   "Narayangonj": ["Sadar", "Bandor", "Sonargaon", "Arai Hazar", "Rupgonj"],
@@ -193,6 +205,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId: getCartSessionId(),
           email: userEmail,
           phone: formData.phone,
           name: formData.name,

@@ -24,6 +24,7 @@ export interface IAbandonedCartItem {
 export interface IAbandonedCart extends Document {
   identifier: string; // email (logged-in) othoba normalized phone (guest) — unique per shopper
   email?: string | null;
+  sessionId?: string | null;
   phone?: string | null;
   name?: string;
   items: IAbandonedCartItem[];
@@ -52,6 +53,7 @@ const AbandonedCartItemSchema = new Schema<IAbandonedCartItem>(
 const AbandonedCartSchema = new Schema<IAbandonedCart>(
   {
     identifier: { type: String, required: true, index: true },
+    sessionId: { type: String, default: null, index: true },
     email: { type: String, default: null },
     phone: { type: String, default: null },
     name: { type: String, default: "" },

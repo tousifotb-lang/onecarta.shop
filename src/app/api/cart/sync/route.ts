@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb"; // ⚠️ tor lib/mongodb.ts er export naam check kore niye thik koro
+import connectDB from "@/lib/mongodb";
 import AbandonedCart from "@/models/AbandonedCart";
 import { normalizeBDPhone } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, phone, name, items, totalAmount } = body;
+    const { email, phone, name, items, totalAmount, sessionId } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ ok: false, reason: "empty cart" });
@@ -22,18 +22,28 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const orConditions: any[] = [];
+    // Priority 1: same browser session — always same document, regardless
+    // of typos/corrections in phone or email.
+    let existing = sessionId
+      ? await AbandonedCart.findOne({ sessionId, status: { $in: ["active", "abandoned"] } })
+      : null;
+
+    // Priority 2: fallback matching by phone/email (legacy sessions).
+    if (!existing) {
+      const orConditions: any[] = [];
       if (normalizedPhone) orConditions.push({ phone: normalizedPhone });
       if (normalizedEmail) orConditions.push({ email: normalizedEmail });
-
-      const existing = orConditions.length > 0
-        ? await AbandonedCart.findOne({
-            $or: orConditions,
-            status: { $in: ["active", "abandoned"] },
-          })
-        : null;
+      if (orConditions.length > 0) {
+        existing = await AbandonedCart.findOne({
+          $or: orConditions,
+          status: { $in: ["active", "abandoned"] },
+        });
+      }
+    }
 
     if (existing) {
+      existing.sessionId = sessionId || existing.sessionId;
+      existing.identifier = identifier;
       existing.email = normalizedEmail || existing.email;
       existing.phone = normalizedPhone || existing.phone;
       existing.name = name || existing.name;
@@ -48,6 +58,7 @@ export async function POST(req: NextRequest) {
 
     await AbandonedCart.create({
       identifier,
+      sessionId: sessionId || null,
       email: normalizedEmail,
       phone: normalizedPhone,
       name: name || "",
