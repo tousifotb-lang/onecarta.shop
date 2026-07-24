@@ -325,10 +325,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </div>
 
               {isLogin && (
-                <div className="text-right">
-                  <span className="text-[11px] font-semibold text-[#2c2769] hover:underline cursor-pointer">Forgot Password?</span>
-                </div>
-              )}
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => { onClose(); router.push("/forgot-password"); }}
+                      className="text-[11px] font-semibold text-[#2c2769] hover:underline cursor-pointer"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
 
               <button type="submit" disabled={loading} className="w-full bg-[#2c2769] hover:bg-[#1f1b4d] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50">
                 {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
